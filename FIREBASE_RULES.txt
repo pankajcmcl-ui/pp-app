@@ -1,0 +1,38 @@
+═══════════════════════════════════════════════════════════════════
+FIREBASE SECURITY RULES — Working Version
+═══════════════════════════════════════════════════════════════════
+
+INSTRUCTIONS:
+1. Delete all rules currently in the editor
+2. Copy ONLY the JSON block below (between the lines)
+3. Paste it into Firebase rules editor
+4. Click Publish
+
+═══════════════════════════════════════════════════════════════════
+COPY EVERYTHING BELOW THIS LINE:
+═══════════════════════════════════════════════════════════════════
+{
+  "rules": {
+    ".read": "auth != null && (auth.token.email == 'pankaj.cmcl@gmail.com' || root.child('allowedEmails').child(auth.token.email.replace('.', ',').replace('@', '_at_')).exists())",
+    ".write": "auth != null && (auth.token.email == 'pankaj.cmcl@gmail.com' || root.child('allowedEmails').child(auth.token.email.replace('.', ',').replace('@', '_at_')).exists())",
+    
+    "tasks": {
+      ".indexOn": ["date"]
+    },
+    "reminders": {
+      ".indexOn": ["date"]
+    },
+    "allowedEmails": {
+      ".write": "auth.token.email == 'pankaj.cmcl@gmail.com'"
+    }
+  }
+}
+═══════════════════════════════════════════════════════════════════
+COPY EVERYTHING ABOVE THIS LINE
+═══════════════════════════════════════════════════════════════════
+
+WHAT CHANGED:
+- Old method used orderByChild (not allowed in security rules)
+- New method stores allowed emails as direct keys (faster + works)
+- When you add "john@gmail.com", it's stored as key "john_at_gmail,com"
+- Admin email: pankaj.cmcl@gmail.com (auto-allowed)
