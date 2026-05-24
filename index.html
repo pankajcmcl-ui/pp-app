@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>Packing Plant Dashboard</title>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f8fafc;
+    margin: 0;
+    padding: 20px;
+}
+
+.delbtn {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #94a3b8;
+}
+
+.editbtn {
+    position: absolute;
+    bottom: 6px;
+    right: 35px;
+    color: #2563eb;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 17px;
+}
+
+.tc {
+    position: relative;
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+
+.nodata {
+    color: #64748b;
+    list-style: none;
+}
+
+.tc-by {
+    font-size: 14px;
+    color: #475569;
+}
+
+.tc-meta {
+    margin-top: 5px;
+    font-size: 13px;
+}
+
+.tc-job {
+    margin-top: 8px;
+    font-size: 15px;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Packing Plant Dashboard</h2>
+
+<ul id="taskList"></ul>
+
+<script>
+// Sample variables
+var USER_NAME = "Team";
+var selDate = new Date().toISOString().split('T')[0];
+var allTasks = {};
+var expRows = [];
+var expTitle = "";
+
+// Escape helper
+function esc(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+// Toast helper
+function toast(msg, err) {
+    alert(msg);
+}
+
+// Modal placeholders
+function showM(id) {
+    console.log("Show modal:", id);
+}
+
+function closeM(id) {
+    console.log("Close modal:", id);
+}
+
+// Firebase placeholder
+var fbDb = {
+    ref: function(path) {
+        return {
+            set: function(data) {
+                return Promise.resolve();
+            },
+            push: function() {
+                return {
+                    set: function(data) {
+                        return Promise.resolve();
+                    }
+                };
+            }
+        };
+    }
+};
+
+// --- Task Render with Edit ---
+function taskHTML(arr) {
+    if (!arr.length) return '<li class="nodata">No logs for this line</li>';
+
+    return arr.sort(function(a, b) {
+        return (b.ts || 0) - (a.ts || 0);
+    }).map(function(t) {
+        return '<li class="tc">' +
+            '<button class="delbtn" onclick="delTask(\\'' + esc(t._id) + '\\')">&#x2715;</button>' +
+            '<button class="editbtn" onclick="editTask(\\'' + esc(t._id) + '\\')">&#9998;</button>' +
+            '<div class="tc-by">&#128100; ' + esc(t.user || 'Team') + '</div>' +
+            '<div class="tc-meta"><span><b>Sr:</b> ' + esc(t.srno || '-') +
+            ' <b>Tag:</b> ' + esc(t.tag || '-') + '</span></div>' +
+            '<div class="tc-job">' + esc(t.job || '') + '</div>' +
+            '</li>';
+    }).join('');
+}
+
+// --- Edit Task Logic ---
+function editTask(id) {
+    var t = allTasks[id];
+    if (!t) return;
+
+    console.log("Editing task:", t);
+    showM('addModal');
+}
+
+// --- Delete Task ---
+function delTask(id) {
+    delete allTasks[id];
+    renderTasks();
+    toast("Task deleted");
+}
+
+// --- Enhanced Save Logic ---
+function saveTask() {
+    var job = "Sample Job";
+
+    if (!job) {
+        toast('Job Description required!', true);
+        return;
+    }
+
+    var task = {
+        ts: Date.now(),
+        user: USER_NAME,
+        date: selDate,
+        srno: "001",
+        tag: "TAG-01",
+        line: "Line A",
+        plant: "Plant 1",
+        job: job,
+        doneby: "Operator",
+        remarks: "Completed"
+    };
+
+    var id = "task_" + Date.now();
+    task._id = id;
+    allTasks[id] = task;
+
+    renderTasks();
+
+    toast('Saved!');
+}
+
+// --- Tag Report Logic ---
+function doTagReport() {
+    var tag = "TAG-01";
+
+    var rows = Object.keys(allTasks)
+        .map(function(k) {
+            return allTasks[k];
+        })
+        .filter(function(t) {
+            return t.tag === tag;
+        });
+
+    if (!rows.length) {
+        toast('No tasks found', true);
+        return;
+    }
+
+    rows.sort(function(a, b) {
+        return new Date(a.date) - new Date(b.date);
+    });
+
+    expRows = rows;
+    expTitle = 'Report_Tag_' + tag;
+
+    console.log("Generated report:", expTitle, expRows);
+}
+
+// Render tasks
+function renderTasks() {
+    var list = document.getElementById("taskList");
+    list.innerHTML = taskHTML(Object.values(allTasks));
+}
+
+// Demo task
+saveTask();
+</script>
+
+</body>
+</html>
