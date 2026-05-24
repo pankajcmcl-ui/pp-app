@@ -1,0 +1,2179 @@
+<!-- VERSION: SECURE-v3-2026-05-24 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PP Dashboard">
+<meta name="theme-color" content="#0f172a">
+<title>Packing Plant Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--pc:#0f172a;--ac:#2563eb;--ah:#1d4ed8;--sc:#16a34a;--bg:#f1f5f9;--card:#fff;--bc:#e2e8f0;--tm:#334155;--mu:#64748b;}
+body,input,select,textarea,button{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif !important;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{margin:0;padding:0;background:var(--bg);color:var(--tm);overscroll-behavior:none;}
+
+/* SETUP */
+#setup{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:var(--pc);}
+#setup h1{color:#fff;font-size:22px;margin:0 0 8px;text-align:center;}
+#setup p{color:#94a3b8;font-size:13px;margin:0 0 22px;text-align:center;line-height:1.6;max-width:380px;}
+.setup-card{background:#1e293b;border-radius:16px;padding:22px;width:100%;max-width:440px;border:1px solid #334155;}
+.setup-card h2{color:#fff;margin:0 0 14px;font-size:15px;}
+.steps{background:#0f172a;border-radius:8px;padding:12px 14px;margin-bottom:16px;border-left:3px solid var(--ac);}
+.steps ol{margin:0;padding-left:18px;}
+.steps li{color:#94a3b8;font-size:11.5px;margin-bottom:5px;line-height:1.5;}
+.steps code{background:#1e293b;color:#7dd3fc;padding:1px 5px;border-radius:3px;font-size:11px;}
+.steps a{color:#60a5fa;}
+.s-inp{width:100%;padding:11px 13px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#fff;font-size:13px;margin-bottom:10px;outline:none;font-family:monospace;}
+.s-inp:focus{border-color:var(--ac);}
+.s-inp::placeholder{color:#475569;}
+.btn-c{width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:6px;}
+.btn-c:active{background:var(--ah);}
+.btn-t{width:100%;padding:10px;background:transparent;color:#94a3b8;border:1px solid #334155;border-radius:8px;font-size:12px;cursor:pointer;}
+#s-msg{margin-top:10px;padding:10px;border-radius:6px;font-size:11.5px;font-weight:600;display:none;text-align:center;}
+.m-ok{background:#052e16;color:#4ade80;border:1px solid #16a34a;}
+.m-err{background:#2d0000;color:#f87171;border:1px solid #dc2626;}
+.m-inf{background:#0c1a3a;color:#7dd3fc;border:1px solid #2563eb;}
+
+/* APP */
+#app{display:none;flex-direction:column;min-height:100vh;}
+.hdr{background:var(--pc);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.hdr h1{margin:0;font-size:15px;font-weight:700;flex:1;}
+#clock{font-size:11px;background:rgba(255,255,255,.12);padding:4px 9px;border-radius:20px;}
+.sdot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;flex-shrink:0;}
+.sdot.off{background:#94a3b8;box-shadow:none;}
+.sdot.busy{background:#fbbf24;animation:sp 1s infinite;}
+@keyframes sp{0%,100%{opacity:1}50%{opacity:.3}}
+.hdr-btn{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;}
+
+.page{display:none;padding:14px;}
+.page.active{display:block;}
+
+.cal-wrap{background:var(--card);border-radius:12px;padding:10px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);border:1px solid var(--bc);}
+.date-banner{font-size:13px;font-weight:700;background:#eff6ff;color:#1e40af;padding:10px 13px;border-radius:8px;border-left:4px solid var(--ac);margin-bottom:10px;}
+.sync-note{font-size:11px;color:var(--mu);text-align:center;padding:7px;background:#f8fafc;border-radius:6px;border:1px solid var(--bc);margin-bottom:10px;}
+.sync-note.live{background:#f0fdf4;color:#16a34a;border-color:#bbf7d0;font-weight:600;}
+
+.btn{padding:12px 14px;font-size:13px;font-weight:600;border-radius:10px;border:none;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;width:100%;}
+.btn:active{transform:scale(.97);}
+.btn-add{background:var(--ac);color:#fff;}
+.btn-add:active{background:var(--ah);}
+.bc{background:#e2e8f0;color:#475569;}
+.bs{background:var(--sc);color:#fff;}
+
+.section-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin:14px 0 8px;display:flex;align-items:center;gap:8px;}
+.section-hdr::after{content:'';flex:1;height:1px;background:var(--bc);}
+.line-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;}
+.l1-b{background:#dbeafe;color:#1e40af;}
+.l2-b{background:#dcfce7;color:#15803d;}
+.tc{background:var(--card);border:1px solid var(--bc);border-radius:10px;padding:11px 11px 30px;margin-bottom:9px;position:relative;box-shadow:0 1px 2px rgba(0,0,0,.05);}
+.tc-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--mu);margin-bottom:4px;}
+.tc-job{font-weight:700;font-size:14px;color:var(--tm);margin-bottom:3px;}
+.tc-by{font-size:10px;color:#16a34a;font-weight:700;margin-bottom:3px;}
+.tc-det{font-size:11px;color:var(--mu);}
+.delbtn{position:absolute;bottom:6px;right:8px;background:none;border:none;color:#94a3b8;font-size:17px;cursor:pointer;padding:4px;border-radius:6px;box-shadow:none;line-height:1;}
+.editbtn{background:none;border:none;color:#2563eb;font-size:16px;cursor:pointer;padding:4px 6px;border-radius:6px;box-shadow:none;line-height:1;}
+.editbtn:active{background:#dbeafe;}
+.delbtn:active{background:#fee2e2;color:#dc2626;}
+.nodata{text-align:center;color:var(--mu);font-style:italic;padding:20px 0;font-size:12px;}
+
+.rem-list{display:flex;flex-direction:column;gap:8px;}
+.ri{background:var(--card);border-radius:10px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--bc);}
+.ri.nu{border-left:4px solid var(--ac);background:#eff6ff;}
+.ri-t{font-weight:700;font-size:12.5px;color:var(--ac);}
+.ri-d{font-size:11px;color:var(--mu);margin-top:2px;}
+.rcd{font-size:11px;font-weight:700;color:var(--ac);white-space:nowrap;}
+.rdel{background:none;border:none;color:#94a3b8;font-size:17px;cursor:pointer;padding:3px;box-shadow:none;margin-left:6px;}
+
+.ar-card{background:var(--card);border-radius:12px;padding:18px;border:1px solid var(--bc);border-top:3px solid #f59e0b;}
+.ar-card h3{margin:0 0 14px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.ar-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0;}
+.ar-dot.on{background:#16a34a;box-shadow:0 0 5px #16a34a;}
+.fl{display:flex;flex-direction:column;gap:4px;margin-bottom:11px;}
+.fl label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mu);}
+.rec-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.rec-num{font-size:11px;color:#f59e0b;font-weight:700;min-width:14px;text-align:center;}
+.rib{width:28px;height:28px;border:1px solid var(--bc);border-radius:6px;background:transparent;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none;padding:0;flex-shrink:0;}
+.rib-a{color:#16a34a;border-color:#bbf7d0;}
+.rib-r{color:#dc2626;border-color:#fecaca;}
+.ar-pv{background:#f8fafc;border:1px dashed var(--bc);border-radius:8px;padding:9px 12px;font-size:11.5px;line-height:1.8;color:var(--mu);margin-bottom:12px;}
+.ar-pk{color:var(--ac);font-weight:700;display:inline-block;min-width:62px;}
+.tog-wrap{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--mu);}
+.tog{position:relative;width:38px;height:21px;display:inline-block;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-sl{position:absolute;inset:0;background:#cbd5e1;border-radius:21px;cursor:pointer;transition:background .25s;}
+.tog-sl::after{content:'';position:absolute;left:3px;top:3px;width:15px;height:15px;background:#fff;border-radius:50%;transition:transform .25s;}
+.tog input:checked~.tog-sl{background:#16a34a;}
+.tog input:checked~.tog-sl::after{transform:translateX(17px);}
+.btn-save-ar{background:#f59e0b;color:#fff;font-weight:700;width:100%;margin-top:12px;}
+
+.rpt-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.rpt-card{background:var(--card);border-radius:12px;padding:16px;text-align:center;border:1px solid var(--bc);cursor:pointer;transition:all .15s;}
+.rpt-card:active{transform:scale(.96);}
+.rpt-icon{font-size:26px;margin-bottom:4px;}
+.rpt-label{font-size:12px;font-weight:700;color:var(--tm);}
+
+.overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.7);z-index:1000;justify-content:center;align-items:flex-end;}
+.overlay.mid{align-items:center;}
+.sheet{background:#fff;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));width:100%;max-width:500px;max-height:90vh;overflow-y:auto;animation:slideUp .25s ease;}
+.overlay.mid .sheet{border-radius:14px;margin:14px;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.sheet h3{margin:0 0 14px;font-size:15px;font-weight:700;color:var(--pc);display:flex;align-items:center;justify-content:space-between;}
+.sheet-close{background:none;border:none;font-size:22px;color:var(--mu);cursor:pointer;padding:0;box-shadow:none;}
+.fg{margin-bottom:11px;}
+.fg label{display:block;margin-bottom:4px;font-size:12px;font-weight:600;color:#475569;}
+.ic{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;font-size:14px;color:var(--tm);font-family:inherit;}
+.ic:focus{outline:none;border-color:var(--ac);}
+.sheet-btns{display:flex;gap:7px;margin-top:14px;}
+.sheet-btns .btn{flex:1;}
+.fmt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+.fmt-opt{border:2px solid var(--bc);padding:16px;border-radius:10px;text-align:center;cursor:pointer;font-weight:700;font-size:13px;}
+.fmt-opt:active{border-color:var(--ac);background:#f0f5ff;}
+
+.fc{--fc-border-color:#e2e8f0;font-size:12px;}
+.fc .fc-toolbar-title{font-size:13px!important;font-weight:700;color:var(--pc);}
+.fc .fc-button-primary{background:#fff;border-color:var(--bc);color:var(--tm);padding:4px 8px;font-size:11px;}
+.fc .fc-button-primary:hover,.fc .fc-button-primary:active{background:#f1f5f9!important;border-color:#cbd5e1!important;color:var(--tm)!important;box-shadow:none!important;}
+.fc .fc-daygrid-day{cursor:pointer;position:relative;}
+.fc .fc-daygrid-day:active{background:#eff6ff!important;}
+.fc .fc-day-today{background:#fef9c3!important;}
+.fc .fc-day-today .fc-daygrid-day-number{color:#92400e!important;font-weight:700;}
+.fc .fc-daygrid-day.sel{background:#2563eb!important;}
+.fc .fc-daygrid-day.sel .fc-daygrid-day-number{color:#fff!important;font-weight:700;}
+.fc-hd::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--ac);position:absolute;bottom:3px;left:50%;transform:translateX(-50%);}
+.fc .fc-daygrid-day-number{font-size:12px;padding:3px 6px;}
+
+#toast{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:10px 18px;border-radius:22px;font-size:12.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:9999;transition:all .3s;opacity:0;max-width:88vw;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;border-left:4px solid #16a34a;pointer-events:none;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.err{border-left-color:#dc2626;}
+
+.bottom-nav{display:flex;background:var(--pc);padding:0 0 env(safe-area-inset-bottom);position:sticky;bottom:0;border-top:1px solid #1e293b;z-index:100;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;cursor:pointer;color:#64748b;font-size:10px;font-weight:600;gap:2px;border:none;background:none;}
+.nav-item.active{color:#fff;}
+.nav-icon{font-size:18px;}
+
+/* LOGIN */
+#login-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);}
+#login-screen h1{color:#fff;font-size:24px;margin:0 0 8px;text-align:center;}
+#login-screen .sub{color:#94a3b8;font-size:13px;margin:0 0 28px;text-align:center;}
+.login-card{background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:400px;border:1px solid #334155;box-shadow:0 20px 40px rgba(0,0,0,.4);}
+.login-card h2{color:#fff;margin:0 0 18px;font-size:16px;text-align:center;}
+.l-inp{width:100%;padding:13px 14px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#fff;font-size:14px;margin-bottom:12px;outline:none;}
+.l-inp:focus{border-color:#2563eb;}
+.l-inp::placeholder{color:#475569;}
+.btn-login{width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;}
+.btn-login:active{background:#1d4ed8;}
+.link-btn{background:none;border:none;color:#60a5fa;font-size:12px;cursor:pointer;text-decoration:underline;padding:6px;display:block;width:100%;text-align:center;margin-top:8px;}
+#login-msg{margin-top:10px;padding:10px;border-radius:6px;font-size:12px;font-weight:600;display:none;text-align:center;}
+
+/* Password modal */
+.pwd-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;justify-content:center;align-items:center;}
+.pwd-box{background:#fff;border-radius:14px;padding:24px;width:90%;max-width:360px;box-shadow:0 20px 50px rgba(0,0,0,.5);}
+.pwd-box h3{margin:0 0 12px;font-size:16px;color:#0f172a;}
+.pwd-box p{margin:0 0 14px;font-size:13px;color:#64748b;}
+.pwd-inp{width:100%;padding:11px 13px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:12px;box-sizing:border-box;}
+
+/* Reminder tabs */
+.rem-tabs{display:flex;background:#f1f5f9;border-radius:10px;padding:4px;margin-bottom:12px;}
+.rem-tab{flex:1;padding:9px;text-align:center;font-size:12px;font-weight:700;color:#64748b;cursor:pointer;border-radius:7px;border:none;background:none;}
+.rem-tab.active{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.rem-tab .rt-count{display:inline-block;background:#cbd5e1;color:#334155;padding:1px 7px;border-radius:10px;font-size:10px;margin-left:4px;}
+.rem-tab.active .rt-count{background:#2563eb;color:#fff;}
+
+/* Total log count */
+.total-logs{font-size:11px;color:#16a34a;font-weight:700;background:#f0fdf4;padding:8px 12px;border-radius:6px;border:1px solid #bbf7d0;margin-bottom:10px;text-align:center;}
+
+/* Chat */
+.chat-msg{padding:8px 12px;border-radius:12px;max-width:80%;font-size:13px;line-height:1.4;word-wrap:break-word;}
+.chat-mine{background:#2563eb;color:#fff;align-self:flex-end;border-bottom-right-radius:3px;}
+.chat-other{background:#e2e8f0;color:#0f172a;align-self:flex-start;border-bottom-left-radius:3px;}
+.chat-name{font-size:10px;font-weight:700;margin-bottom:2px;opacity:.85;}
+.chat-time{font-size:9px;margin-top:2px;opacity:.6;}
+
+/* Reminder priority colors */
+.ri-high{color:#dc2626 !important;}
+.ri-med{color:#d97706 !important;}
+.ri-low{color:#16a34a !important;}
+.ri-done .ri-t{text-decoration:line-through;opacity:.65;}
+
+/* Priority radio chips */
+.pri-chips{display:flex;gap:6px;margin-bottom:11px;}
+.pri-chip{flex:1;padding:9px;text-align:center;border:1.5px solid var(--bc);border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;background:#fff;}
+.pri-chip.active.h{background:#fee2e2;border-color:#dc2626;color:#dc2626;}
+.pri-chip.active.m{background:#fef3c7;border-color:#d97706;color:#d97706;}
+.pri-chip.active.l{background:#dcfce7;border-color:#16a34a;color:#16a34a;}
+
+/* Reminder time fields */
+.ri-times{font-size:10px;color:var(--mu);margin-top:3px;line-height:1.5;}
+.ri-times b{color:#475569;}
+
+/* Reactivate button in completed */
+.r-reactivate{background:none;border:1px solid #2563eb;color:#2563eb;font-size:10px;cursor:pointer;padding:3px 8px;border-radius:5px;box-shadow:none;font-weight:700;}
+
+@keyframes tickerScroll{ 0%{transform:translateX(0);} 100%{transform:translateX(-100%);} }
+</style>
+</head>
+<body>
+
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <h1>&#127981; Packing Plant <span style="font-size:10px;background:#16a34a;color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle;">v3.0 SECURE</span></h1>
+  <p class="sub">Secure Team Dashboard<br><span style="font-size:11px;opacity:.7;">Sign in with your Google account to continue</span></p>
+  <div class="login-card">
+    <h2 style="text-align:center;">&#128274; Secure Sign In</h2>
+    <button class="btn-login" onclick="googleLogin()" style="background:#fff;color:#0f172a;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #cbd5e1;">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8a12 12 0 1 1 0-24c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.4 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4 5.6l6.2 5.2c-.4.4 6.6-4.8 6.6-14.8 0-1.3-.1-2.3-.5-3.5z"/></svg>
+      Sign in with Google
+    </button>
+    <div id="login-msg"></div>
+    <div style="margin-top:18px;padding:12px;background:#0f172a;border-radius:8px;border-left:3px solid #2563eb;">
+      <div style="font-size:11px;color:#94a3b8;line-height:1.6;">
+        &#128274; <strong style="color:#7dd3fc;">Security:</strong><br>
+        &bull; Only pre-approved Google accounts can access<br>
+        &bull; Data secured by Firebase rules<br>
+        &bull; No passwords stored anywhere<br>
+        &bull; Contact admin if you can't sign in
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD CONFIRM DIALOG -->
+<div class="pwd-overlay" id="pwdConfirm">
+  <div class="pwd-box">
+    <h3 id="pwdTitle">&#128274; Confirm Password</h3>
+    <p id="pwdMsg">Enter your password to confirm this action.</p>
+    <input class="pwd-inp" type="password" id="pwdInput" placeholder="Password" onkeydown="if(event.key==='Enter')confirmPwd()">
+    <div style="display:flex;gap:8px;">
+      <button class="btn bc" style="flex:1;" onclick="closePwd()">Cancel</button>
+      <button class="btn btn-add" style="flex:1;" onclick="confirmPwd()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setup">
+  <h1>&#128737; Admin Setup (One Time)</h1>
+  <p>Paste your Firebase config from Firebase Console &rarr; Project Settings &rarr; Your apps &rarr; SDK setup and configuration</p>
+  <div class="setup-card">
+    <h2>&#128737; Firebase Config</h2>
+    <p style="font-size:12px;color:#94a3b8;margin:0 0 10px;">Paste the entire firebaseConfig object below (including the curly braces):</p>
+    <textarea id="fbConfig" rows="10" placeholder='{
+  apiKey: "AIzaSy...",
+  authDomain: "packingplant.firebaseapp.com",
+  databaseURL: "https://packingplant-default-rtdb.firebaseio.com",
+  projectId: "packingplant",
+  ...
+}' style="width:100%;padding:12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#fff;font-size:11px;font-family:monospace;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+    <button onclick="saveFbConfig()" style="width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;">&#10003; Save Firebase Config</button>
+    <div id="s-msg" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+<!-- Overdue Ticker -->
+<div id="overdueTicker" style="display:none;background:#831843;color:#fff;padding:8px 0;overflow:hidden;font-weight:700;font-size:13px;border-bottom:2px solid #500724;position:sticky;top:0;z-index:99;">
+  <div id="tickerText" style="display:inline-block;padding-left:100%;animation:tickerScroll 18s linear infinite;white-space:nowrap;"></div>
+</div>
+
+  <div class="hdr">
+    <h1>&#127981; PP Dashboard <span id="adminBadge" style="display:none;font-size:9px;background:#16a34a;color:#fff;padding:2px 7px;border-radius:10px;margin-left:4px;font-weight:700;">ADMIN</span></h1>
+    <div id="clock">--:--:--</div>
+    <span class="sdot" id="sdot"></span>
+    <button class="hdr-btn" onclick="showSetup()">&#9881;</button>
+    <button class="hdr-btn" onclick="doLogout()" style="background:#dc2626;">Logout</button>
+  </div>
+
+  <div style="flex:1;overflow:hidden;">
+
+    <div class="page active" id="page-dash">
+      <div class="cal-wrap"><div id="calendar"></div></div>
+      <div class="date-banner" id="banner">Loading...</div>
+      <div class="sync-note live" id="sync-note">&#9889; LIVE - Real-time team sync</div>
+      <div class="total-logs" id="totalLogs">Total logs today: 0</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-add" onclick="openAdd()">&#43; Add Task</button>
+        <button class="btn" onclick="openUpload()" style="background:#16a34a;color:#fff;">&#128194; Upload Sheet</button>
+      </div>
+      <div class="section-hdr" onclick="toggleLine('l1',this)" style="cursor:pointer;">Line-1 <span class="line-badge l1-b" id="c1">0</span> <span class="chev-l1" style="margin-left:4px;font-size:11px;transition:transform .3s;">&#9660;</span></div>
+      <ul id="l1" style="list-style:none;padding:0;margin:0;display:block;"></ul>
+      <div class="section-hdr" onclick="toggleLine('l2',this)" style="cursor:pointer;">Line-2 <span class="line-badge l2-b" id="c2">0</span> <span class="chev-l2" style="margin-left:4px;font-size:11px;transition:transform .3s;">&#9660;</span></div>
+      <ul id="l2" style="list-style:none;padding:0;margin:0;display:block;"></ul>
+      <div style="height:80px;"></div>
+    </div>
+
+    <div class="page" id="page-reports">
+      <div class="date-banner" id="rpt-banner" style="margin-bottom:14px;">Reports</div>
+      <div class="rpt-grid">
+        <div class="rpt-card" onclick="rptD()"><div class="rpt-icon">&#128197;</div><div class="rpt-label">Daily</div></div>
+        <div class="rpt-card" onclick="rptM()"><div class="rpt-icon">&#128198;</div><div class="rpt-label">Monthly</div></div>
+        <div class="rpt-card" onclick="rptY()"><div class="rpt-icon">&#128200;</div><div class="rpt-label">Yearly</div></div>
+        <div class="rpt-card" onclick="rptR()"><div class="rpt-icon">&#128202;</div><div class="rpt-label">Date Range</div></div>
+      </div>
+      <div style="margin-top:14px;background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--bc);border-top:3px solid #f59e0b;">
+        <div style="font-size:13px;font-weight:700;color:var(--pc);margin-bottom:10px;">&#127991; Tag-Based Report</div>
+        <div style="font-size:11px;color:var(--mu);margin-bottom:10px;">Enter a Tag ID to find all related tasks across all dates and lines.</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="tagSearch" class="ic" placeholder="e.g. 531bc1" style="flex:1;text-transform:none;">
+          <button class="btn" onclick="rptByTag()" style="width:auto;padding:10px 16px;background:#f59e0b;color:#fff;font-weight:700;">&#128269; Search</button>
+        </div>
+      </div>
+      <div style="height:80px;"></div>
+    </div>
+
+    <div class="page" id="page-rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="margin:0;font-size:15px;font-weight:700;color:var(--pc);">&#9200; Reminders</h2>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-add" style="width:auto;padding:8px 13px;font-size:12px;background:#475569;" onclick="openRemReport()">&#128203; Print</button>
+          <button class="btn btn-add" style="width:auto;padding:8px 13px;font-size:12px;" onclick="openRem()">&#43; Add</button>
+        </div>
+      </div>
+      <div class="rem-tabs">
+        <button class="rem-tab active" id="rtab-up" onclick="switchRemTab('up')">&#9200; Upcoming <span class="rt-count" id="rcnt-up">0</span></button>
+        <button class="rem-tab" id="rtab-done" onclick="switchRemTab('done')">&#9989; Completed <span class="rt-count" id="rcnt-done">0</span></button>
+      </div>
+      <div class="rem-list" id="rlist"><p class="nodata">No reminders yet</p></div>
+      <div style="height:80px;"></div>
+    </div>
+
+    <div class="page" id="page-ar">
+      <div class="ar-card">
+        <h3>&#128232; Auto Report <span class="ar-dot" id="ardot"></span></h3>
+        <div class="fl"><label>From</label><input type="email" id="arFrom" class="ic" placeholder="reports@plant.com" oninput="arPrev()"></div>
+        <div class="fl"><label>Subject</label><input type="text" id="arSubj" class="ic" placeholder="Daily Report" oninput="arPrev()"></div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mu);margin-bottom:7px;">To (Recipients)</div>
+        <div id="arRecs"></div>
+        <div class="fl"><label>CC (comma separated)</label><input type="text" id="arCc" class="ic" placeholder="cc1@example.com, cc2@example.com" oninput="arPrev()"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px;">
+          <div class="fl"><label>Time</label><input type="time" id="arTime" class="ic" value="07:00" onchange="arPrev()"></div>
+          <div class="fl"><label>Frequency</label>
+            <select id="arFreq" class="ic" onchange="arPrev()">
+              <option value="daily">Daily</option>
+              <option value="weekdays">Weekdays</option>
+              <option value="weekly">Weekly (Mon)</option>
+              <option value="monthly">Monthly (1st)</option>
+            </select>
+          </div>
+        </div>
+        <div class="ar-pv">
+          <div><span class="ar-pk">FROM:</span><span id="pvFrom">-</span></div>
+          <div><span class="ar-pk">TO:</span><span id="pvTo">-</span></div>
+          <div><span class="ar-pk">CC:</span><span id="pvCc">-</span></div>
+          <div><span class="ar-pk">SUBJECT:</span><span id="pvSubj">-</span></div>
+          <div><span class="ar-pk">SENDS:</span><span id="pvSched">-</span></div>
+        </div>
+        <div class="tog-wrap">
+          <label class="tog"><input type="checkbox" id="arEn" onchange="arToggle(this)"><span class="tog-sl"></span></label>
+          Enable Auto Send
+        </div>
+        <div class="fl" style="margin-top:8px;"><label>Report Date (for Send Mail)</label><input type="date" id="arRptDate" class="ic"></div>
+<div style="display:flex;gap:8px;margin-top:12px;">
+  <button class="btn btn-save-ar" onclick="arSave()" style="flex:1;">&#128190; Save Schedule</button>
+  <button class="btn" onclick="arSendMail()" style="flex:1;background:#2563eb;color:#fff;font-weight:700;">&#128231; Send Mail</button>
+</div>
+      </div>
+      <div style="height:80px;"></div>
+    </div>
+
+
+    <div class="page" id="page-chat">
+      <h2 style="margin:0 0 12px;font-size:15px;font-weight:700;color:var(--pc);">&#128172; Team Chat</h2>
+      <div id="chatMsgs" style="background:#fff;border:1px solid var(--bc);border-radius:10px;padding:10px;height:62vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;"></div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <input type="text" id="chatInp" class="ic" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()" style="flex:1;">
+        <button class="btn btn-add" onclick="sendChat()" style="width:auto;padding:10px 16px;">&#9658;</button>
+      </div>
+      <div style="height:80px;"></div>
+    </div>
+
+    <div class="page" id="page-assign">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="margin:0;font-size:15px;font-weight:700;color:var(--pc);">&#128203; Task Assignment</h2>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-add" style="width:auto;padding:8px 12px;font-size:11px;background:#475569;" onclick="openAssignReport()">&#128203; Report</button>
+          <button class="btn btn-add" style="width:auto;padding:8px 12px;font-size:11px;" onclick="openAssign()" id="addAssignBtn">&#43; Assign</button>
+        </div>
+      </div>
+      <div class="rem-tabs">
+        <button class="rem-tab active" id="atab-all" onclick="switchAssignTab('all')">All <span class="rt-count" id="acnt-all">0</span></button>
+        <button class="rem-tab" id="atab-pending" onclick="switchAssignTab('pending')">Pending <span class="rt-count" id="acnt-pending">0</span></button>
+        <button class="rem-tab" id="atab-done" onclick="switchAssignTab('done')">Done <span class="rt-count" id="acnt-done">0</span></button>
+      </div>
+      <div id="assignList"></div>
+      <div style="height:80px;"></div>
+    </div>
+
+    <div class="page" id="page-about">
+      <div style="background:#fff;border:1px solid var(--bc);border-radius:14px;padding:24px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.07);">
+        <div style="font-size:48px;margin-bottom:12px;">&#127981;</div>
+        <h2 style="margin:0 0 18px;color:var(--pc);font-size:18px;">Packing Plant Dashboard</h2>
+        <div style="background:#f8fafc;padding:18px;border-radius:10px;border-left:4px solid #f59e0b;text-align:left;">
+          <div style="font-size:15px;line-height:2;color:var(--tm);">
+            <div>&#129311; <strong>Admin: Pankaj Kr. Singh.</strong></div>
+            <div style="margin-left:32px;font-weight:700;color:#f59e0b;">STAR CEMENT LIMITED</div>
+            <div style="margin-top:8px;">&#128231; Contact me:</div>
+            <div style="margin-left:32px;"><a href="mailto:pankajsingh@starcement.co.in" style="color:#2563eb;text-decoration:none;font-weight:600;">pankajsingh@starcement.co.in</a></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;font-size:11px;color:var(--mu);">v3.0 Secure Edition &middot; Firebase + Google Auth</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--mu);">Logged in as: <span id="aboutUserEmail" style="font-weight:600;color:#0f172a;">-</span></div>
+      </div>
+      <!-- Admin: Manage Allowed Users -->
+      <div id="adminUserCard" style="display:none;margin-top:16px;background:#fff;border:1px solid var(--bc);border-radius:14px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.07);">
+        <h3 style="margin:0 0 12px;font-size:14px;color:var(--pc);">&#128272; Manage Team Access (Admin Only)</h3>
+        <p style="font-size:11px;color:var(--mu);margin:0 0 10px;">Add Google email addresses of team members who should have access.</p>
+        <div style="display:flex;gap:6px;">
+          <input type="email" id="newAllowEmail" class="ic" placeholder="team@gmail.com" style="flex:1;">
+          <button class="btn btn-add" onclick="addAllowedUser()" style="width:auto;padding:10px 14px;">Add</button>
+        </div>
+        <div id="allowedList" style="margin-top:12px;"></div>
+      </div>
+      <div style="height:80px;"></div>
+    </div>
+
+  </div>
+
+  <div class="bottom-nav" style="overflow-x:auto;">
+    <button class="nav-item active" id="nav-dash" onclick="switchPage('dash')"><span class="nav-icon">&#127968;</span>Home</button>
+    <button class="nav-item" id="nav-reports" onclick="switchPage('reports')"><span class="nav-icon">&#128202;</span>Reports</button>
+    <button class="nav-item" id="nav-rem" onclick="switchPage('rem')"><span class="nav-icon">&#9200;</span>Reminders</button>
+    <button class="nav-item" id="nav-ar" onclick="switchPage('ar')"><span class="nav-icon">&#128232;</span>Mail</button>
+    <button class="nav-item" id="nav-chat" onclick="switchPage('chat')"><span class="nav-icon">&#128172;</span>Chat</button>
+    <button class="nav-item" id="nav-assign" onclick="switchPage('assign')"><span class="nav-icon">&#128203;</span>Assign</button>
+    <button class="nav-item" id="nav-about" onclick="switchPage('about')"><span class="nav-icon">&#8505;</span>About</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+
+<!-- Upload Sheet Modal -->
+<div class="overlay" id="uploadModal"><div class="sheet">
+  <h3>&#128194; Upload Excel Sheet <button class="sheet-close" onclick="closeM('uploadModal')">&#215;</button></h3>
+  <p style="font-size:12px;color:#64748b;margin:0 0 12px;line-height:1.6;">Upload an Excel file (.xlsx) with these columns: <b>Sr No, Tag, Line, Plant, Job, Done By, Remarks, Date</b>. Sheet name doesn't matter.</p>
+  <input type="file" id="upFile" accept=".xlsx,.xls,.csv" class="ic" style="padding:8px;">
+  <div id="upPreview" style="margin-top:10px;font-size:12px;color:#475569;"></div>
+  <div class="sheet-btns">
+    <button class="btn bc" onclick="closeM('uploadModal')">Cancel</button>
+    <button class="btn btn-add" onclick="processUpload()">&#9658; Upload &amp; Save</button>
+  </div>
+  <div id="upHistory" style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:10px;font-size:12px;"></div>
+</div></div>
+
+<!-- Overdue Remarks Modal -->
+<div class="overlay mid" id="overdueModal"><div class="sheet" style="border-radius:14px;border-top:4px solid #2563eb;">
+  <h3 style="color:#2563eb;">&#9888; Overdue Reminder</h3>
+  <div id="overdueTxt" style="background:#eff6ff;padding:12px;border-radius:8px;margin-bottom:12px;font-size:13px;color:#1e40af;font-weight:600;"></div>
+  <div class="fg"><label>Why is this incomplete? (Required)</label>
+    <textarea id="overdueRemark" class="ic" rows="3" placeholder="Explain reason..."></textarea>
+  </div>
+  <button class="btn btn-add" onclick="submitOverdueRemark()" style="width:100%;">Submit Remark</button>
+</div></div>
+
+
+<!-- Task Assignment Modal -->
+<div class="overlay" id="assignModal"><div class="sheet">
+  <h3 id="assignModalTitle">&#43; Assign Task <button class="sheet-close" onclick="closeM('assignModal')">&#215;</button></h3>
+  <div class="fg"><label>Name (Assignee)</label><input type="text" id="asName" class="ic" placeholder="e.g. John"></div>
+  <div class="fg"><label>Assigned Job</label><textarea id="asJob" class="ic" rows="2" placeholder="Job description"></textarea></div>
+  <div class="fg"><label>Target Date</label><input type="date" id="asTarget" class="ic"></div>
+  <div class="fg"><label>Status</label>
+    <select id="asStatus" class="ic">
+      <option value="Pending">Pending</option>
+      <option value="Under Process">Under Process</option>
+      <option value="Completed">Completed</option>
+    </select>
+  </div>
+  <div class="fg"><label>Remarks</label><input type="text" id="asRemarks" class="ic"></div>
+  <div class="sheet-btns">
+    <button class="btn bc" onclick="closeM('assignModal')">Cancel</button>
+    <button class="btn bs" onclick="saveAssign()">Save</button>
+  </div>
+</div></div>
+
+<!-- Assignment Report Modal -->
+<div class="overlay mid" id="assignRptModal"><div class="sheet" style="border-radius:14px;">
+  <h3>&#128203; Assignment Report <button class="sheet-close" onclick="closeM('assignRptModal')">&#215;</button></h3>
+  <div class="fg"><label>From Date</label><input type="date" id="arrStart" class="ic"></div>
+  <div class="fg"><label>To Date</label><input type="date" id="arrEnd" class="ic"></div>
+  <div class="fg"><label>Format</label>
+    <div class="fmt-grid" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="fmt-opt" onclick="doAssignRpt('excel')" style="color:#16a34a;">&#128202;<br>Excel</div>
+      <div class="fmt-opt" onclick="doAssignRpt('word')" style="color:#2563eb;">&#128196;<br>Word</div>
+      <div class="fmt-opt" onclick="doAssignRpt('pdf')" style="color:#dc2626;">&#128203;<br>PDF</div>
+    </div>
+  </div>
+  <button class="btn bc" onclick="closeM('assignRptModal')" style="margin-top:10px;">Cancel</button>
+</div></div>
+
+<!-- Reminder Report Modal -->
+<div class="overlay mid" id="remRptModal"><div class="sheet" style="border-radius:14px;">
+  <h3>&#128203; Reminder Report <button class="sheet-close" onclick="closeM('remRptModal')">&#215;</button></h3>
+  <div class="fg"><label>From Date</label><input type="date" id="rrStart" class="ic"></div>
+  <div class="fg"><label>To Date</label><input type="date" id="rrEnd" class="ic"></div>
+  <div class="fg"><label>Format</label>
+    <div class="fmt-grid" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="fmt-opt" onclick="doRemRpt('excel')" style="color:#16a34a;">&#128202;<br>Excel</div>
+      <div class="fmt-opt" onclick="doRemRpt('word')" style="color:#2563eb;">&#128196;<br>Word</div>
+      <div class="fmt-opt" onclick="doRemRpt('pdf')" style="color:#dc2626;">&#128203;<br>PDF</div>
+    </div>
+  </div>
+  <button class="btn bc" onclick="closeM('remRptModal')" style="margin-top:10px;">Cancel</button>
+</div></div>
+
+<!-- Line Filter Modal -->
+<div class="overlay mid" id="lineModal"><div class="sheet" style="border-radius:14px;">
+  <h3>Choose Line for Report <button class="sheet-close" onclick="closeM('lineModal')">&#215;</button></h3>
+  <p style="font-size:12px;color:#64748b;margin:0 0 14px;">Select which line to include in the report:</p>
+  <div class="fmt-grid" style="grid-template-columns:1fr;gap:8px;">
+    <div class="fmt-opt" onclick="applyLineFilter('all')" style="color:#0f172a;">&#128202; <strong>All Lines</strong> (Line-1 + Line-2)</div>
+    <div class="fmt-opt" onclick="applyLineFilter('Line-1')" style="color:#1e40af;">&#127919; <strong>Line-1 Only</strong></div>
+    <div class="fmt-opt" onclick="applyLineFilter('Line-2')" style="color:#15803d;">&#127919; <strong>Line-2 Only</strong></div>
+  </div>
+</div></div>
+
+<!-- Modals -->
+<!-- Edit Task Modal -->
+<div class="overlay" id="editModal"><div class="sheet">
+  <h3>&#9998; Edit Task <button class="sheet-close" onclick="closeM('editModal')">&#215;</button></h3>
+  <div class="fg"><label>Date</label><input type="date" id="etd" class="ic"></div>
+  <div class="fg"><label>Sr No</label><input type="number" id="etsrno" class="ic"></div>
+  <div class="fg"><label>Tag ID</label><input type="text" id="ettag" class="ic"></div>
+  <div class="fg"><label>Line</label><select id="etline" class="ic"><option value="Line-1">Line-1</option><option value="Line-2">Line-2</option></select></div>
+  <div class="fg"><label>Plant Station</label><input type="text" id="etplant" class="ic"></div>
+  <div class="fg"><label>Job Description *</label><input type="text" id="etjob" class="ic"></div>
+  <div class="fg"><label>Done By</label><input type="text" id="etdoneby" class="ic"></div>
+  <div class="fg"><label>Remarks</label><input type="text" id="etremarks" class="ic"></div>
+  <div class="sheet-btns">
+    <button class="btn bc" onclick="closeM('editModal')">Cancel</button>
+    <button class="btn btn-add" onclick="saveEdit()">&#128190; Update</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="addModal"><div class="sheet">
+  <h3>Add Task <button class="sheet-close" onclick="closeM('addModal')">&#215;</button></h3>
+  <div class="fg"><label>Date</label><input type="date" id="td" class="ic" onchange="updateSrNo()"></div>
+  <div class="fg"><label>Sr No (auto)</label><input type="number" id="tsrno" class="ic" readonly style="background:#f8fafc;color:#16a34a;font-weight:700;"></div>
+  <div class="fg"><label>Tag ID</label><input type="text" id="ttag" class="ic"></div>
+  <div class="fg"><label>Line</label><select id="tline" class="ic" onchange="updateSrNo()"><option value="Line-1">Line-1</option><option value="Line-2">Line-2</option></select></div>
+  <div class="fg"><label>Plant Station</label><input type="text" id="tplant" class="ic"></div>
+  <div class="fg"><label>Job Description *</label><input type="text" id="tjob" class="ic" placeholder="Required"></div>
+  <div class="fg"><label>Done By</label><input type="text" id="tdoneby" class="ic"></div>
+  <div class="fg"><label>Remarks</label><input type="text" id="tremarks" class="ic"></div>
+  <div class="sheet-btns">
+    <button class="btn bc" onclick="closeM('addModal')">Cancel</button>
+    <button class="btn btn-add" onclick="saveTask()">&#128190; Save</button>
+  </div>
+</div></div>
+
+<div class="overlay" id="remModal"><div class="sheet">
+  <h3>Add Reminder <button class="sheet-close" onclick="closeM('remModal')">&#215;</button></h3>
+  <div class="fg"><label>What to Remind?</label><input type="text" id="remTxt" class="ic"></div>
+  <div class="fg"><label>Date</label><input type="date" id="remDate" class="ic"></div>
+  <div class="fg"><label>Time</label><input type="time" id="remTime" class="ic"></div>
+  <div class="fg"><label>Priority</label>
+    <div class="pri-chips">
+      <div class="pri-chip h" id="pri-h" onclick="setPri('high')">&#128308; High</div>
+      <div class="pri-chip m active" id="pri-m" onclick="setPri('med')">&#128993; Medium</div>
+      <div class="pri-chip l" id="pri-l" onclick="setPri('low')">&#128994; Low</div>
+    </div>
+  </div>
+  <div class="fg"><label>Remarks</label><input type="text" id="remRemarks" class="ic" placeholder="Optional"></div>
+  <div class="sheet-btns">
+    <button class="btn bc" onclick="closeM('remModal')">Cancel</button>
+    <button class="btn bs" onclick="saveRem()">Save</button>
+  </div>
+</div></div>
+
+<div class="overlay mid" id="fmtModal"><div class="sheet" style="border-radius:14px;">
+  <h3 id="fmtTitle">Export <button class="sheet-close" onclick="closeM('fmtModal')">&#215;</button></h3>
+  <div class="fmt-grid" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="fmt-opt" onclick="doExp('excel')" style="color:#16a34a;">&#128202;<br>Excel</div>
+    <div class="fmt-opt" onclick="doExp('word')" style="color:#2563eb;">&#128196;<br>Word</div>
+    <div class="fmt-opt" onclick="doExp('pdf')" style="color:#dc2626;">&#128203;<br>PDF</div>
+  </div>
+</div></div>
+
+<div class="overlay mid" id="rangeModal"><div class="sheet" style="border-radius:14px;">
+  <h3>Date Range <button class="sheet-close" onclick="closeM('rangeModal')">&#215;</button></h3>
+  <div class="fg"><label>Start</label><input type="date" id="rS" class="ic"></div>
+  <div class="fg"><label>End</label><input type="date" id="rE" class="ic"></div>
+  <div class="sheet-btns">
+    <button class="btn bc" onclick="closeM('rangeModal')">Cancel</button>
+    <button class="btn bs" onclick="doRange()">Extract</button>
+  </div>
+</div></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  FIREBASE REAL-TIME SYNC
+// ═══════════════════════════════════════════════════════════
+var FB_URL          = localStorage.getItem('fb_url')          || '';
+var FB_API_KEY      = localStorage.getItem('fb_api_key')      || '';
+var FB_AUTH_DOMAIN  = localStorage.getItem('fb_auth_domain')  || '';
+var FB_PROJECT_ID   = localStorage.getItem('fb_project_id')   || '';
+var USER_NAME       = localStorage.getItem('fb_user')         || '';
+var fbApp = null, fbDb = null;
+var selDate = new Date().toISOString().split('T')[0];
+var allTasks = {}, allRems = {};
+var cal = null;
+var expRows = [], expTitle = '';
+var arRecs = [''], arOn = false, arTmr = null;
+
+window.addEventListener('load', function() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  if (!FB_URL || !FB_API_KEY) {
+    document.getElementById('setup').style.display = 'flex';
+    if (FB_URL) document.getElementById('fbUrl').value = FB_URL;
+    return;
+  }
+  // Initialize Firebase to enable auth check
+  if (firebase.apps && firebase.apps.length === 0) {
+    try {
+      firebase.initializeApp({
+        databaseURL: FB_URL,
+        apiKey: FB_API_KEY,
+        authDomain: FB_AUTH_DOMAIN,
+        projectId: FB_PROJECT_ID
+      });
+      fbDb = firebase.database();
+    } catch(e) { console.error(e); }
+  }
+  // Wait for auth state then either show app or login
+  if (firebase.auth) {
+    firebase.auth().onAuthStateChanged(function(u){
+      if (u && (ADMIN_EMAILS.indexOf(u.email.toLowerCase()) !== -1)) {
+        currentUser = u;
+        USER_NAME = u.displayName || u.email.split('@')[0];
+        sessionStorage.setItem('pp_logged_in','yes');
+        sessionStorage.setItem('pp_user_login', USER_NAME);
+        startApp();
+      } else if (u) {
+        // Check /allowedEmails by key
+        var key = u.email.toLowerCase().replace(/\./g,',').replace(/@/g,'_at_');
+        fbDb.ref('allowedEmails/'+key).once('value').then(function(snap){
+          if (snap.exists()) {
+            currentUser = u;
+            USER_NAME = u.displayName || u.email.split('@')[0];
+            sessionStorage.setItem('pp_logged_in','yes');
+            sessionStorage.setItem('pp_user_login', USER_NAME);
+            startApp();
+          } else {
+            firebase.auth().signOut();
+            document.getElementById('login-screen').style.display = 'flex';
+            setTimeout(function(){ showLoginMsg('Access denied: '+u.email+' not authorized', true); }, 500);
+          }
+        });
+      } else {
+        document.getElementById('login-screen').style.display = 'flex';
+      }
+    });
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+});
+
+// ── SECURE LOGIN WITH GOOGLE ──
+// Admin emails — these have full edit/delete rights
+// Add more admin emails here (one per line). Everyone else gets view+add rights.
+var ADMIN_EMAILS = ['pankaj.cmcl@gmail.com'];
+// Allowed user emails (whitelist). If empty, only ADMIN_EMAILS can access.
+// You can add team emails here OR manage from inside the app (admin only)
+var DEFAULT_ALLOWED = []; // populated from Firebase /allowedEmails
+
+var currentUser = null; // Firebase user object
+var allowedList = []; // emails loaded from Firebase
+
+function isAdmin(){
+  if (!currentUser || !currentUser.email) return false;
+  return ADMIN_EMAILS.indexOf(currentUser.email.toLowerCase()) !== -1;
+}
+
+function googleLogin() {
+  if (!FB_URL) {
+    // First time — load setup screen
+    document.getElementById('setup').style.display = 'flex';
+    document.getElementById('login-screen').style.display = 'none';
+    return;
+  }
+  if (!firebase.apps || !firebase.apps.length) {
+    firebase.initializeApp({
+      databaseURL: FB_URL,
+      apiKey: FB_API_KEY,
+      authDomain: FB_AUTH_DOMAIN,
+      projectId: FB_PROJECT_ID
+    });
+  }
+  var provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  firebase.auth().signInWithPopup(provider).then(function(result){
+    var u = result.user;
+    showLoginMsg('Signed in as ' + u.email + ', checking access...', false);
+    checkAccessAndProceed(u);
+  }).catch(function(err){
+    showLoginMsg('Sign-in failed: ' + err.message, true);
+  });
+}
+
+function checkAccessAndProceed(u) {
+  // First check: admin emails always allowed
+  if (ADMIN_EMAILS.indexOf(u.email.toLowerCase()) !== -1) {
+    proceedWithUser(u);
+    return;
+  }
+  // Otherwise: check /allowedEmails (by key)
+  fbDb = firebase.database();
+  var key = emailToKey(u.email);
+  fbDb.ref('allowedEmails/'+key).once('value').then(function(snap){
+    if (snap.exists()) {
+      proceedWithUser(u);
+    } else {
+      firebase.auth().signOut();
+      showLoginMsg('Access denied: '+u.email+' is not authorized. Contact admin to be added.', true);
+    }
+  }).catch(function(err){
+    showLoginMsg('Firebase check failed: ' + err.message, true);
+  });
+}
+
+function proceedWithUser(u) {
+  currentUser = u;
+  USER_NAME = u.displayName || u.email.split('@')[0];
+  sessionStorage.setItem('pp_logged_in','yes');
+  sessionStorage.setItem('pp_user_login', USER_NAME);
+  localStorage.setItem('fb_user', USER_NAME);
+  localStorage.setItem('fb_email', u.email);
+  document.getElementById('login-screen').style.display = 'none';
+  initFirebase();
+}
+
+function doLogout() {
+  if (firebase.auth) {
+    firebase.auth().signOut().then(function(){
+      sessionStorage.clear();
+      location.reload();
+    });
+  } else {
+    sessionStorage.clear();
+    location.reload();
+  }
+}
+
+function showLoginMsg(t,err) {
+  var m = document.getElementById('login-msg');
+  m.textContent = t;
+  m.style.background = err?'#2d0000':'#052e16';
+  m.style.color = err?'#f87171':'#4ade80';
+  m.style.border = '1px solid '+(err?'#dc2626':'#16a34a');
+  m.style.display = 'block';
+}
+
+function forgotPwd() {
+  var u = document.getElementById('loginUser').value.trim() || 'unknown';
+  var subject = encodeURIComponent('Packing Plant App - Password Reset Request');
+  var body = encodeURIComponent('Username: '+u+'\nRequest time: '+new Date().toLocaleString()+'\n\nPlease send the password to this user.');
+  window.open('mailto:pankajsingh@starcement.co.in?subject='+subject+'&body='+body,'_blank');
+  showLoginMsg('Email opened — send to admin',false);
+}
+
+function doLogout() {
+  sessionStorage.removeItem('pp_logged_in');
+  sessionStorage.removeItem('pp_user_login');
+  location.reload();
+}
+
+// ── PASSWORD CONFIRM DIALOG (for delete) ──
+var pwdCallback = null;
+function askPassword(title, msg, callback) {
+  document.getElementById('pwdTitle').textContent = title || 'Confirm Password';
+  document.getElementById('pwdMsg').textContent = msg || 'Enter your password to confirm.';
+  document.getElementById('pwdInput').value = '';
+  pwdCallback = callback;
+  document.getElementById('pwdConfirm').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('pwdInput').focus(); },100);
+}
+function closePwd() { document.getElementById('pwdConfirm').style.display='none'; pwdCallback=null; }
+function confirmPwd() {
+  var p = document.getElementById('pwdInput').value;
+  if (p !== APP_PASSWORD) { toast('Wrong password',true); return; }
+  closePwd();
+  if (pwdCallback) pwdCallback();
+}
+
+function initFirebase() {
+  try {
+    if (firebase.apps && firebase.apps.length === 0) {
+      fbApp = firebase.initializeApp({
+        databaseURL: FB_URL,
+        apiKey: FB_API_KEY,
+        authDomain: FB_AUTH_DOMAIN,
+        projectId: FB_PROJECT_ID
+      });
+    } else {
+      fbApp = firebase.app();
+    }
+    fbDb = firebase.database();
+    // Listen for auth state
+    firebase.auth().onAuthStateChanged(function(u){
+      if (u) {
+        currentUser = u;
+        // Re-check authorization in case admin status changed
+        var isAuthorized = (ADMIN_EMAILS.indexOf(u.email.toLowerCase()) !== -1);
+        if (!isAuthorized) {
+          var key2 = u.email.toLowerCase().replace(/\./g,',').replace(/@/g,'_at_');
+          fbDb.ref('allowedEmails/'+key2).once('value').then(function(snap){
+            if (!snap.exists()) {
+              firebase.auth().signOut();
+              location.reload();
+              return;
+            }
+            startApp();
+          });
+        } else {
+          startApp();
+        }
+      }
+    });
+    // If already signed in (cached), this fires automatically
+    if (!currentUser) {
+      // Wait briefly for auth state
+      setTimeout(function(){
+        if (!currentUser && firebase.auth().currentUser) {
+          currentUser = firebase.auth().currentUser;
+          startApp();
+        } else if (!currentUser) {
+          // Not signed in — show login
+          document.getElementById('login-screen').style.display = 'flex';
+        }
+      }, 1500);
+    }
+  } catch(e) {
+    alert('Firebase init failed: ' + e.message);
+    document.getElementById('setup').style.display = 'flex';
+  }
+}
+
+function startApp() {
+  showApp();
+  listenForTasks();
+  listenForReminders();
+  listenForChat();
+  listenForAssigns();
+  listenForAllowedUsers();
+  setTimeout(checkOverdueReminders, 3000);
+}
+
+function listenForTasks() {
+  setDot('busy');
+  fbDb.ref('tasks').on('value', function(snap) {
+    allTasks = snap.val() || {};
+    setDot('ok');
+    renderTasks();
+    refreshDots();
+    reHL();
+  }, function(err) {
+    setDot('off');
+    toast('Sync error: ' + err.message, true);
+  });
+}
+
+function listenForReminders() {
+  fbDb.ref('reminders').on('value', function(snap) {
+    allRems = snap.val() || {};
+    renderRems();
+  });
+}
+
+// SETUP
+function testFb() {
+  var url = document.getElementById('fbUrl').value.trim();
+  var msg = document.getElementById('s-msg');
+  if (!url || url.indexOf('firebaseio.com') === -1) {
+    showMsg('Enter a valid Firebase Realtime Database URL (must end in firebaseio.com)', 'err');
+    return;
+  }
+  showMsg('Testing connection...', 'inf');
+  fetch(url + '/.json?shallow=true')
+    .then(function(r) { return r.json(); })
+    .then(function() { showMsg('Connection OK! Click Connect to proceed.', 'ok'); })
+    .catch(function(e) { showMsg('Failed: ' + e.message + '. Make sure database is in test mode.', 'err'); });
+}
+
+function saveFbConfig() {
+  var raw = document.getElementById('fbConfig').value.trim();
+  if (!raw) { showMsg('Paste Firebase config first', 'err'); return; }
+  // Parse — handle JS object syntax (with unquoted keys)
+  try {
+    // Add quotes around keys
+    var jsonStr = raw.replace(/([a-zA-Z_]\w*)\s*:/g, '"$1":').replace(/'/g, '"');
+    // Strip trailing semicolon or "const firebaseConfig ="
+    jsonStr = jsonStr.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+    var cfg = JSON.parse(jsonStr);
+    if (!cfg.databaseURL && cfg.projectId) {
+      cfg.databaseURL = 'https://' + cfg.projectId + '-default-rtdb.firebaseio.com';
+    }
+    if (!cfg.databaseURL || !cfg.apiKey || !cfg.authDomain || !cfg.projectId) {
+      showMsg('Config missing required fields (need apiKey, authDomain, databaseURL, projectId)', 'err');
+      return;
+    }
+    localStorage.setItem('fb_url', cfg.databaseURL);
+    localStorage.setItem('fb_api_key', cfg.apiKey);
+    localStorage.setItem('fb_auth_domain', cfg.authDomain);
+    localStorage.setItem('fb_project_id', cfg.projectId);
+    FB_URL = cfg.databaseURL;
+    FB_API_KEY = cfg.apiKey;
+    FB_AUTH_DOMAIN = cfg.authDomain;
+    FB_PROJECT_ID = cfg.projectId;
+    showMsg('Saved! Reloading...', 'ok');
+    setTimeout(function(){ location.reload(); }, 1200);
+  } catch(e) {
+    showMsg('Parse error: '+e.message+'. Make sure config is valid.', 'err');
+  }
+}
+
+function showMsg(t, type) {
+  var el = document.getElementById('s-msg');
+  if (!el) return;
+  el.textContent = t;
+  el.style.cssText = 'margin-top:10px;padding:10px;border-radius:6px;font-size:12px;font-weight:600;text-align:center;display:block;background:'+(type==='ok'?'#052e16':type==='err'?'#2d0000':'#0c1a3a')+';color:'+(type==='ok'?'#4ade80':type==='err'?'#f87171':'#7dd3fc')+';border:1px solid '+(type==='ok'?'#16a34a':type==='err'?'#dc2626':'#2563eb')+';';
+}
+
+function showMsg(t, type) {
+  var el = document.getElementById('s-msg');
+  el.textContent = t;
+  el.className = 'm-' + type;
+  el.style.display = 'block';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app').style.flexDirection = 'column';
+  initCalendar();
+  setInterval(tick, 1000); tick();
+  arInit();
+  if (arTmr) clearTimeout(arTmr);
+  arSched();
+  // Show admin badge if applicable
+  if (isAdmin()) {
+    var b = document.getElementById('adminBadge');
+    if (b) b.style.display = 'inline-block';
+    var ac = document.getElementById('adminUserCard');
+    if (ac) ac.style.display = 'block';
+  } else {
+    var ab = document.getElementById('addAssignBtn');
+    if (ab) ab.style.display = 'none';
+  }
+  // Show email in about
+  var ae = document.getElementById('aboutUserEmail');
+  if (ae && currentUser) ae.textContent = currentUser.email + (isAdmin()?' (Admin)':' (User)');
+}
+
+function showSetup() {
+  document.getElementById('fbUrl').value = FB_URL || '';
+  document.getElementById('userName').value = USER_NAME || '';
+  document.getElementById('s-msg').style.display = 'none';
+  document.getElementById('setup').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+function tick() { var c = document.getElementById('clock'); if(c) c.textContent = new Date().toLocaleTimeString(); }
+
+function setDot(s) {
+  var d = document.getElementById('sdot');
+  if(!d) return;
+  d.className = 'sdot' + (s==='ok'?'':s==='busy'?' busy':' off');
+}
+
+// CALENDAR
+function initCalendar() {
+  cal = new FullCalendar.Calendar(document.getElementById('calendar'), {
+    initialView: 'dayGridMonth',
+    selectable: true,
+    headerToolbar: { left:'prev,next today', center:'title', right:'' },
+    dateClick: function(info) {
+      document.querySelectorAll('.fc-daygrid-day.sel').forEach(function(el){ el.classList.remove('sel'); });
+      info.dayEl.classList.add('sel');
+      selDate = info.dateStr;
+      updateBanner();
+      renderTasks();
+    },
+    datesSet: function() { setTimeout(function(){ reHL(); refreshDots(); }, 60); }
+  });
+  cal.render();
+  updateBanner();
+}
+
+function updateBanner() {
+  var d = new Date(selDate+'T00:00:00');
+  var s = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  var b = document.getElementById('banner');
+  var rb = document.getElementById('rpt-banner');
+  if(b) b.textContent = 'Selected: ' + s;
+  if(rb) rb.textContent = 'Reports for: ' + s;
+  var td = document.getElementById('td');
+  if(td) td.value = selDate;
+}
+
+function reHL() {
+  document.querySelectorAll('.fc-daygrid-day.sel').forEach(function(el){ el.classList.remove('sel'); });
+  var el = document.querySelector('[data-date="'+selDate+'"]');
+  if(el) el.classList.add('sel');
+}
+
+function refreshDots() {
+  document.querySelectorAll('.fc-hd').forEach(function(el){ el.classList.remove('fc-hd'); });
+  var dates = {};
+  Object.keys(allTasks).forEach(function(k){ if(allTasks[k].date) dates[allTasks[k].date]=true; });
+  Object.keys(dates).forEach(function(d){
+    var el = document.querySelector('[data-date="'+d+'"]');
+    if(el) el.classList.add('fc-hd');
+  });
+}
+
+// TASKS
+function renderTasks() {
+  var arr = Object.keys(allTasks).map(function(k){ var o=allTasks[k]; o._id=k; return o; });
+  var day = arr.filter(function(t){ return t.date === selDate; });
+  var l1 = day.filter(function(t){ return t.line === 'Line-1'; });
+  var l2 = day.filter(function(t){ return t.line === 'Line-2'; });
+  document.getElementById('c1').textContent = l1.length;
+  document.getElementById('c2').textContent = l2.length;
+  document.getElementById('l1').innerHTML = taskHTML(l1);
+  document.getElementById('l2').innerHTML = taskHTML(l2);
+  document.getElementById('totalLogs').textContent = 'Total logs on ' + selDate + ': ' + day.length + '  (Line-1: '+l1.length+' | Line-2: '+l2.length+')';
+}
+
+function toggleLine(id, hdr) {
+  var ul = document.getElementById(id);
+  var chev = hdr.querySelector('.chev-'+id);
+  if (ul.style.display === 'none') {
+    ul.style.display = 'block';
+    if (chev) chev.style.transform = 'rotate(0deg)';
+  } else {
+    ul.style.display = 'none';
+    if (chev) chev.style.transform = 'rotate(-90deg)';
+  }
+}
+
+function taskHTML(arr) {
+  if (!arr.length) return '<li class="nodata">No logs for this line</li>';
+  var admin = isAdmin();
+  return arr.sort(function(a,b){return (parseInt(a.srno)||0)-(parseInt(b.srno)||0);}).map(function(t){
+    var btns = admin ?
+      ('<div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">' +
+       '<button class="editbtn" onclick="openEdit(\''+esc(t._id)+'\')" title="Edit">&#9998;</button>' +
+       '<button class="delbtn" style="position:static;" onclick="delTask(\''+esc(t._id)+'\')">&#x2715;</button>' +
+       '</div>') : '';
+    return '<li class="tc">' + btns +
+      '<div class="tc-by">&#128100; '+esc(t.user||'Team')+'</div>' +
+      '<div class="tc-meta"><span><b>Sr:</b>'+esc(t.srno||'-')+' <b>Tag:</b>'+esc(t.tag||'-')+'</span><span><b>By:</b>'+esc(t.doneby||'N/A')+'</span></div>' +
+      '<div class="tc-job">'+esc(t.job||'')+'</div>' +
+      '<div class="tc-det"><b>Station:</b> '+esc(t.plant||'-')+' | '+esc(t.remarks||'-')+'</div>' +
+      '</li>';
+  }).join('');
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function openAdd() {
+  document.getElementById('td').value = selDate;
+  document.getElementById('tdoneby').value = USER_NAME || '';
+  // Auto-increment Sr No: find max Sr No for selected date and line, +1
+  updateSrNo();
+  showM('addModal');
+}
+
+function updateSrNo() {
+  var d = document.getElementById('td').value || selDate;
+  var line = document.getElementById('tline').value;
+  var arr = Object.keys(allTasks).map(function(k){ return allTasks[k]; });
+  var existing = arr.filter(function(t){ return t.date === d && t.line === line; });
+  var maxSr = 0;
+  existing.forEach(function(t){
+    var n = parseInt(t.srno);
+    if (!isNaN(n) && n > maxSr) maxSr = n;
+  });
+  document.getElementById('tsrno').value = maxSr + 1;
+}
+
+function saveTask() {
+  var job = document.getElementById('tjob').value.trim();
+  if (!job) { toast('Job Description required!', true); return; }
+  var key = fbDb.ref('tasks').push().key;
+  var task = {
+    ts: Date.now(),
+    user: USER_NAME,
+    date: document.getElementById('td').value || selDate,
+    srno: document.getElementById('tsrno').value,
+    tag:  document.getElementById('ttag').value,
+    line: document.getElementById('tline').value,
+    plant:document.getElementById('tplant').value,
+    job:  job,
+    doneby:  document.getElementById('tdoneby').value,
+    remarks: document.getElementById('tremarks').value
+  };
+  fbDb.ref('tasks/' + key).set(task)
+    .then(function() {
+      closeM('addModal');
+      selDate = task.date;
+      if(cal) cal.gotoDate(selDate);
+      updateBanner();
+      toast('Task saved & synced to team!');
+      ['tsrno','ttag','tplant','tjob','tdoneby','tremarks'].forEach(function(id){ document.getElementById(id).value=''; });
+    })
+    .catch(function(e){ toast('Save failed: '+e.message, true); });
+}
+
+function delTask(id) {
+  if (!isAdmin()) { toast('Only admin can delete tasks',true); return; }
+  askPassword('Delete Task','Enter admin password.',function(){
+    fbDb.ref('tasks/' + id).remove().then(function(){ toast('Deleted'); }).catch(function(e){ toast('Failed: '+e.message, true); });
+  });
+}
+
+var editingId = null;
+
+function openEdit(id) {
+  if (!isAdmin()) { toast('Only admin can edit tasks',true); return; }
+  var t = allTasks[id];
+  if (!t) { toast('Task not found',true); return; }
+  editingId = id;
+  document.getElementById('etd').value = t.date || '';
+  document.getElementById('etsrno').value = t.srno || '';
+  document.getElementById('ettag').value = t.tag || '';
+  document.getElementById('etline').value = t.line || 'Line-1';
+  document.getElementById('etplant').value = t.plant || '';
+  document.getElementById('etjob').value = t.job || '';
+  document.getElementById('etdoneby').value = t.doneby || '';
+  document.getElementById('etremarks').value = t.remarks || '';
+  showM('editModal');
+}
+
+function saveEdit() {
+  if (!editingId) return;
+  var job = document.getElementById('etjob').value.trim();
+  if (!job) { toast('Job Description required!',true); return; }
+  var updates = {
+    date: document.getElementById('etd').value,
+    srno: document.getElementById('etsrno').value,
+    tag:  document.getElementById('ettag').value,
+    line: document.getElementById('etline').value,
+    plant:document.getElementById('etplant').value,
+    job:  job,
+    doneby:  document.getElementById('etdoneby').value,
+    remarks: document.getElementById('etremarks').value,
+    editedBy: USER_NAME,
+    editedAt: Date.now()
+  };
+  fbDb.ref('tasks/' + editingId).update(updates).then(function(){
+    closeM('editModal');
+    toast('Task updated & synced!');
+    editingId = null;
+  }).catch(function(e){ toast('Update failed: '+e.message, true); });
+}
+
+// REPORTS
+var pendingReport = { lo:'', hi:'', title:'' };
+
+function buildRpt(lo, hi, title) {
+  pendingReport = { lo:lo, hi:hi, title:title };
+  showM('lineModal');
+}
+
+function applyLineFilter(lineChoice) {
+  closeM('lineModal');
+  var p = pendingReport;
+  var arr = Object.keys(allTasks).map(function(k){return allTasks[k];});
+  var rows = arr.filter(function(t){ return t.date >= p.lo && t.date <= p.hi; });
+  if (lineChoice === 'Line-1') rows = rows.filter(function(t){ return t.line === 'Line-1'; });
+  if (lineChoice === 'Line-2') rows = rows.filter(function(t){ return t.line === 'Line-2'; });
+  if (!rows.length) { toast('No data for this period/line.', true); return; }
+  // Sort by date then by Sr No
+  rows.sort(function(a,b){
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    if (a.line !== b.line) return a.line.localeCompare(b.line);
+    return (parseInt(a.srno)||0) - (parseInt(b.srno)||0);
+  });
+  expRows = rows;
+  expTitle = p.title + (lineChoice==='all' ? '_AllLines' : '_'+lineChoice);
+  document.getElementById('fmtTitle').textContent = 'Export: ' + expTitle.replace(/_/g,' ');
+  showM('fmtModal');
+}
+function rptD(){ buildRpt(selDate, selDate, 'Daily_'+selDate); }
+function rptM(){ var m=selDate.substring(0,7); buildRpt(m+'-01',m+'-31','Monthly_'+m); }
+function rptY(){ var y=selDate.substring(0,4); buildRpt(y+'-01-01',y+'-12-31','Yearly_'+y); }
+function rptR(){ document.getElementById('rS').value=selDate; document.getElementById('rE').value=selDate; showM('rangeModal'); }
+
+function rptByTag() {
+  var tag = document.getElementById('tagSearch').value.trim();
+  if (!tag) { toast('Enter a Tag ID first', true); return; }
+  var arr = Object.keys(allTasks).map(function(k){return allTasks[k];});
+  // Case-insensitive partial match on tag
+  var tagLow = tag.toLowerCase();
+  var rows = arr.filter(function(t){
+    return t.tag && t.tag.toLowerCase().indexOf(tagLow) !== -1;
+  });
+  if (!rows.length) { toast('No tasks found for tag: '+tag, true); return; }
+  // Sort by date then Sr No
+  rows.sort(function(a,b){
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    if (a.line !== b.line) return a.line.localeCompare(b.line);
+    return (parseInt(a.srno)||0) - (parseInt(b.srno)||0);
+  });
+  expRows = rows;
+  expTitle = 'Tag_Report_' + tag.replace(/[^a-zA-Z0-9]/g,'_');
+  document.getElementById('fmtTitle').textContent = 'Export: '+rows.length+' tasks for tag "'+tag+'"';
+  toast('Found '+rows.length+' tasks for tag "'+tag+'"');
+  showM('fmtModal');
+}
+function doRange(){
+  var s=document.getElementById('rS').value, e=document.getElementById('rE').value;
+  if(!s||!e){ toast('Both dates required', true); return; }
+  closeM('rangeModal'); buildRpt(s,e,'Range_'+s+'_to_'+e);
+}
+function doExp(fmt){
+  closeM('fmtModal');
+  if(fmt==='excel') xExcel(expRows, expTitle);
+  if(fmt==='word')  xWord(expRows, expTitle);
+  if(fmt==='pdf')   xPDF(expRows, expTitle);
+}
+
+async function xWord(rows, fn) {
+  try {
+    var d = docx;
+    var Document=d.Document, Packer=d.Packer, Paragraph=d.Paragraph, Table=d.Table, TableRow=d.TableRow, TableCell=d.TableCell, TextRun=d.TextRun, WidthType=d.WidthType, AlignmentType=d.AlignmentType, HeadingLevel=d.HeadingLevel;
+    var cols=['Sr No','Tag','Line','Plant','Job','Done By','Remarks','Date'];
+    var keys=['srno','tag','line','plant','job','doneby','remarks','date'];
+    function cell(v,b){return new TableCell({children:[new Paragraph({children:[new TextRun({text:String(v||''),bold:!!b,size:b?22:20})],alignment:AlignmentType.LEFT})],margins:{top:80,bottom:80,left:100,right:100}});}
+    var hRow=new TableRow({children:cols.map(function(c){return cell(c,true);})});
+    var dRows=rows.map(function(t){return new TableRow({children:keys.map(function(k){return cell(t[k]||'-');})});});
+    var doc=new Document({sections:[{children:[
+      new Paragraph({text:'Packing Plant Operational Report',heading:HeadingLevel.HEADING_1}),
+      new Paragraph({text:'Generated: '+new Date().toLocaleDateString(),spacing:{after:260}}),
+      new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[hRow].concat(dRows)})
+    ]}]});
+    var blob=await Packer.toBlob(doc);
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=fn+'.docx';
+    a.click();
+    toast('Word file downloaded!');
+  } catch(e) { toast('Word export failed: '+e.message, true); }
+}
+function xExcel(rows,fn){
+  var d=[['Sr No','Tag','Line','Plant','Job','Done By','Remarks','Date']];
+  rows.forEach(function(t){d.push([t.srno,t.tag,t.line,t.plant,t.job,t.doneby,t.remarks,t.date]);});
+  var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Report');
+  XLSX.writeFile(wb,fn+'.xlsx');
+}
+function xPDF(rows,fn){
+  var {jsPDF}=window.jspdf;var doc=new jsPDF('l','mm','a4');
+  doc.setFont('Helvetica','bold');doc.setFontSize(14);doc.setTextColor(15,23,42);
+  doc.text('Packing Plant Operational Report',14,14);
+  doc.autoTable({startY:20,head:[['Sr No','Tag','Line','Plant','Job','Done By','Remarks','Date']],
+    body:rows.map(function(t){return[t.srno,t.tag,t.line,t.plant,t.job,t.doneby,t.remarks,t.date];}),
+    theme:'striped',headStyles:{fillColor:[15,23,42]},styles:{fontSize:8}});
+  doc.save(fn+'.pdf');
+}
+
+// REMINDERS
+function openRem() {
+  editingRemId = null;
+  document.getElementById('remDate').value = selDate;
+  document.getElementById('remTime').value = '';
+  document.getElementById('remTxt').value  = '';
+  document.getElementById('remRemarks').value = '';
+  setPri('med');
+  showM('remModal');
+}
+var editingRemId = null;
+
+var currentPri = 'med';
+function setPri(p) {
+  currentPri = p;
+  document.getElementById('pri-h').classList.toggle('active', p==='high');
+  document.getElementById('pri-m').classList.toggle('active', p==='med');
+  document.getElementById('pri-l').classList.toggle('active', p==='low');
+}
+
+function saveRem() {
+  var txt = document.getElementById('remTxt').value.trim();
+  var d = document.getElementById('remDate').value;
+  var t = document.getElementById('remTime').value;
+  var rem = document.getElementById('remRemarks').value.trim();
+  if (!txt||!d||!t) { toast('All fields required', true); return; }
+  if (editingRemId) {
+    fbDb.ref('reminders/'+editingRemId).update({ text:txt, date:d, time:t, priority:currentPri, remarks:rem, editedBy:USER_NAME, editedAt:Date.now() })
+      .then(function(){ closeM('remModal'); toast('Reminder updated!'); editingRemId = null; });
+  } else {
+    var key = fbDb.ref('reminders').push().key;
+    fbDb.ref('reminders/'+key).set({ text:txt, date:d, time:t, priority:currentPri, remarks:rem, user:USER_NAME, ts:Date.now(), addedAt:Date.now() })
+      .then(function(){ closeM('remModal'); toast('Reminder synced!'); });
+  }
+}
+
+function editRem(id) {
+  var r = allRems[id];
+  if (!r) { toast('Reminder not found',true); return; }
+  editingRemId = id;
+  document.getElementById('remTxt').value = r.text || '';
+  document.getElementById('remDate').value = r.date || '';
+  document.getElementById('remTime').value = r.time || '';
+  document.getElementById('remRemarks').value = r.remarks || '';
+  setPri(r.priority || 'med');
+  showM('remModal');
+}
+
+function reactivateRem(id) {
+  var r = allRems[id];
+  if (!r) return;
+  askPassword('Reactivate Reminder', 'Enter password to move back to Upcoming.', function(){
+    var newD = new Date(Date.now() + 3600000); // +1 hour default
+    var nd = newD.toISOString().split('T')[0];
+    var nt = newD.toTimeString().substring(0,5);
+    fbDb.ref('reminders/'+id).update({
+      date: nd, time: nt, completedAt: null, reactivatedBy: USER_NAME, reactivatedAt: Date.now()
+    }).then(function(){ toast('Reactivated! New time: ' + nd + ' ' + nt); });
+  });
+}
+function delRem(id) {
+  if (!isAdmin()) { toast('Only admin can delete reminders',true); return; }
+  askPassword('Delete Reminder','Enter admin password.',function(){
+    fbDb.ref('reminders/'+id).remove();
+  });
+}
+function cdStr(d,t){
+  var diff=new Date(d+'T'+t)-new Date(); if(diff<0)return'Past';
+  var m=Math.floor(diff/60000),h=Math.floor(m/60),days=Math.floor(h/24);
+  if(days>1)return'In '+days+' days'; if(days===1)return'Tomorrow';
+  if(h>1)return'In '+h+'h'; if(m>1)return'In '+m+'m'; return'Soon';
+}
+function fmtDt(d,t){ var dt=new Date(d+'T'+t); return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+dt.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}); }
+var currentRemTab = 'up';
+function switchRemTab(t){
+  currentRemTab = t;
+  document.getElementById('rtab-up').classList.toggle('active', t==='up');
+  document.getElementById('rtab-done').classList.toggle('active', t==='done');
+  renderRems();
+}
+
+function renderRems(){
+  var el = document.getElementById('rlist');
+  var arr = Object.keys(allRems).map(function(k){var r=allRems[k];r._id=k;return r;});
+  var now = new Date();
+  var upcoming = arr.filter(function(r){ return new Date(r.date+'T'+r.time) >= now; });
+  var done = arr.filter(function(r){ return new Date(r.date+'T'+r.time) < now; });
+  document.getElementById('rcnt-up').textContent = upcoming.length;
+  document.getElementById('rcnt-done').textContent = done.length;
+
+  var show = (currentRemTab === 'up') ? upcoming : done;
+  if (currentRemTab === 'up') show.sort(function(a,b){
+    var ap = {high:0,med:1,low:2}[a.priority||'med'];
+    var bp = {high:0,med:1,low:2}[b.priority||'med'];
+    if (ap !== bp) return ap - bp;
+    return (a.date+a.time).localeCompare(b.date+b.time);
+  });
+  else show.sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); });
+
+  if (!show.length) { el.innerHTML = '<p class="nodata">No '+(currentRemTab==='up'?'upcoming':'completed')+' reminders</p>'; return; }
+  var ni = (currentRemTab === 'up') ? 0 : -1;
+  el.innerHTML = show.map(function(r,i){
+    var pri = r.priority || 'med';
+    var priClass = pri==='high'?'ri-high':pri==='low'?'ri-low':'ri-med';
+    var priIcon = pri==='high'?'&#128308;':pri==='low'?'&#128994;':'&#128993;';
+    var doneClass = (currentRemTab==='done') ? ' ri-done' : '';
+    var admin = isAdmin();
+    var editBtn = (currentRemTab === 'up' && admin) ? '<button class="editbtn" onclick="editRem(\''+esc(r._id)+'\')" title="Edit">&#9998;</button>' : '';
+    var reactivateBtn = (currentRemTab === 'done' && admin) ? '<button class="r-reactivate" onclick="reactivateRem(\''+esc(r._id)+'\')" title="Reactivate">&#8634; Reactivate</button>' : '';
+    var delBtn = admin ? '<button class="rdel" onclick="delRem(\''+esc(r._id)+'\')">&#x2715;</button>' : '';
+    var addedStr = r.addedAt ? new Date(r.addedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
+    var lapseStr = '';
+    if (currentRemTab === 'up') {
+      lapseStr = '<b>Added:</b> ' + addedStr + ' &middot; <b>Lapse:</b> ' + cdStr(r.date,r.time);
+    } else {
+      var compStr = r.completedAt ? new Date(r.completedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}) : new Date(r.date+'T'+r.time).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
+      lapseStr = '<b>Added:</b> ' + addedStr + ' &middot; <b>Completed:</b> ' + compStr;
+    }
+    return '<div class="ri'+(i===ni?' nu':'')+doneClass+'">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div class="ri-t '+priClass+'">'+priIcon+' '+esc(r.text)+'</div>' +
+        '<div class="ri-d">'+fmtDt(r.date,r.time)+(r.user?' &middot; '+esc(r.user):'')+'</div>' +
+        '<div class="ri-times">'+lapseStr+'</div>' +
+        (r.remarks?'<div class="ri-times"><b>Remarks:</b> '+esc(r.remarks)+'</div>':'') +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' +
+        editBtn + reactivateBtn + delBtn +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── REMINDER ALARM TONE ──
+var firedReminders = {};
+function checkReminderAlarms(){
+  var arr = Object.keys(allRems).map(function(k){var r=allRems[k];r._id=k;return r;});
+  var now = new Date();
+  arr.forEach(function(r){
+    var due = new Date(r.date+'T'+r.time);
+    var diff = now - due;
+    // Fire if within last 90 seconds and not already fired
+    if (diff >= 0 && diff < 90000 && !firedReminders[r._id]) {
+      firedReminders[r._id] = true;
+      playAlarm();
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification('Reminder!', { body: r.text, icon: 'icon-192.png', vibrate:[500,200,500] }); } catch(e){}
+      }
+      toast('REMINDER: ' + r.text);
+      // Mark as completed in DB (silently)
+      if (!r.completedAt) {
+        fbDb.ref('reminders/'+r._id).update({ completedAt: Date.now() }).catch(function(){});
+      }
+    }
+  });
+}
+setInterval(checkReminderAlarms, 15000);
+// Also check on focus
+window.addEventListener('focus', checkReminderAlarms);
+
+var audioCtx = null;
+function unlockAudio() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      // Resume context (required on iOS/some Android)
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      // Play silent buffer to unlock
+      var buf = audioCtx.createBuffer(1, 1, 22050);
+      var src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(audioCtx.destination);
+      src.start(0);
+    } catch(e) { console.warn('Audio unlock:', e); }
+  }
+}
+// Unlock on first user tap anywhere
+document.addEventListener('click', unlockAudio, { once: false });
+document.addEventListener('touchstart', unlockAudio, { once: false });
+
+function playAlarm(){
+  unlockAudio();
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    var beepOffsets = [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5];
+    beepOffsets.forEach(function(offset, i){
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = (i % 2 === 0) ? 880 : 660;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.5, audioCtx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + offset + 0.45);
+      osc.start(audioCtx.currentTime + offset);
+      osc.stop(audioCtx.currentTime + offset + 0.45);
+    });
+    if ('vibrate' in navigator) {
+      navigator.vibrate([500,200,500,200,500,200,500,200,500,200,500]);
+    }
+  } catch(e) { console.warn('Alarm failed:', e); }
+}
+
+// Test alarm button helper (can be called from console too)
+function testAlarm() { playAlarm(); toast('Test alarm playing...'); }
+
+// ════════════════════════════════════════════════════
+//  CHAT
+// ════════════════════════════════════════════════════
+var allChat = {};
+function listenForChat() {
+  if (!fbDb) return;
+  fbDb.ref('chat').limitToLast(200).on('value', function(snap){
+    allChat = snap.val() || {};
+    renderChat();
+  });
+}
+
+// ── Manage Allowed Users (admin only) ──
+function listenForAllowedUsers() {
+  if (!fbDb) return;
+  fbDb.ref('allowedEmails').on('value', function(snap){
+    allowedList = [];
+    var d = snap.val() || {};
+    Object.keys(d).forEach(function(k){ allowedList.push({_id:k, email:d[k].email||keyToEmail(k), addedBy:d[k].addedBy, ts:d[k].ts}); });
+    renderAllowedList();
+  });
+}
+
+function renderAllowedList() {
+  var el = document.getElementById('allowedList');
+  if (!el) return;
+  if (!allowedList.length) { el.innerHTML = '<i style="color:#94a3b8;font-size:12px;">No team members added yet</i>'; return; }
+  el.innerHTML = allowedList.map(function(u){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f8fafc;border-radius:6px;margin-bottom:6px;font-size:12px;">'+
+      '<span><b>'+esc(u.email)+'</b><br><span style="color:#94a3b8;font-size:10px;">Added by '+esc(u.addedBy||'-')+'</span></span>'+
+      '<button class="rdel" onclick="removeAllowedUser(\''+u._id+'\')">&#x2715;</button>'+
+    '</div>';
+  }).join('');
+}
+
+function emailToKey(e){ return e.toLowerCase().replace(/\./g,',').replace(/@/g,'_at_'); }
+function keyToEmail(k){ return k.replace(/_at_/g,'@').replace(/,/g,'.'); }
+
+function addAllowedUser() {
+  if (!isAdmin()) { toast('Admin only',true); return; }
+  var email = document.getElementById('newAllowEmail').value.trim().toLowerCase();
+  if (!email || email.indexOf('@') === -1) { toast('Enter valid email',true); return; }
+  var key = emailToKey(email);
+  fbDb.ref('allowedEmails/'+key).set({ email:email, addedBy:USER_NAME, ts:Date.now() })
+    .then(function(){
+      document.getElementById('newAllowEmail').value = '';
+      toast('Added: '+email);
+    }).catch(function(e){ toast('Failed: '+e.message,true); });
+}
+
+function removeAllowedUser(key) {
+  if (!isAdmin()) { toast('Admin only',true); return; }
+  if (!confirm('Remove this user access?')) return;
+  fbDb.ref('allowedEmails/'+key).remove();
+}
+
+function sendChat() {
+  var inp = document.getElementById('chatInp');
+  var txt = inp.value.trim();
+  if (!txt) return;
+  if (!fbDb) { toast('Not connected',true); return; }
+  var key = fbDb.ref('chat').push().key;
+  fbDb.ref('chat/'+key).set({ text:txt, user:USER_NAME, ts:Date.now() })
+    .then(function(){ inp.value=''; });
+}
+// ════════════════════════════════════════════════════
+//  UPLOAD SHEET (Excel parser)
+// ════════════════════════════════════════════════════
+function openUpload() {
+  if (!isAdmin()) { toast('Only admin can upload sheets',true); return; }
+  document.getElementById('upFile').value = '';
+  document.getElementById('upPreview').innerHTML = '';
+  renderUploadHistory();
+  showM('uploadModal');
+}
+
+function renderUploadHistory() {
+  if (!fbDb) return;
+  fbDb.ref('uploads').once('value').then(function(snap){
+    var ups = snap.val() || {};
+    var el = document.getElementById('upHistory');
+    var keys = Object.keys(ups);
+    if (!keys.length) { el.innerHTML = '<i style="color:#94a3b8;">No upload history</i>'; return; }
+    el.innerHTML = '<b>Upload History:</b><br>' + keys.map(function(k){
+      var u = ups[k];
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;"><span>'+esc(u.filename||'file')+' &middot; '+u.count+' rows &middot; '+new Date(u.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})+'</span><button class="rdel" onclick="delUploadHistory(\''+k+'\')">&#x2715;</button></div>';
+    }).join('');
+  });
+}
+
+function delUploadHistory(id) {
+  if (!isAdmin()) { toast('Admin only',true); return; }
+  if (!confirm('Delete upload history? (Task data will remain)')) return;
+  fbDb.ref('uploads/'+id).remove().then(function(){ toast('History deleted (data kept)'); renderUploadHistory(); });
+}
+
+function processUpload() {
+  var f = document.getElementById('upFile').files[0];
+  if (!f) { toast('Choose a file first',true); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, {type:'array'});
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(sheet, {defval:'', raw:false});
+      if (!rows.length) { toast('Sheet is empty',true); return; }
+      // Map flexibly
+      var added = 0;
+      rows.forEach(function(r){
+        // Try multiple key variations
+        var get = function(){
+          for (var i=0;i<arguments.length;i++) {
+            for (var k in r) {
+              if (k.toLowerCase().replace(/[^a-z0-9]/g,'') === arguments[i].toLowerCase().replace(/[^a-z0-9]/g,'')) return r[k];
+            }
+          }
+          return '';
+        };
+        var dateRaw = get('Date','date','TaskDate');
+        // Convert Excel date to YYYY-MM-DD
+        var date = '';
+        if (dateRaw) {
+          if (typeof dateRaw === 'number') {
+            var d = new Date((dateRaw - 25569) * 86400 * 1000);
+            date = d.toISOString().split('T')[0];
+          } else {
+            date = String(dateRaw).split(' ')[0];
+            // Try to parse various formats
+            var parts = date.split(/[-\/]/);
+            if (parts.length === 3) {
+              if (parts[0].length === 4) date = parts.join('-');
+              else if (parts[2].length === 4) date = parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+            }
+          }
+        }
+        if (!date) date = new Date().toISOString().split('T')[0];
+        var job = get('Job','JobDescription','Description');
+        if (!job) return;
+        var key = fbDb.ref('tasks').push().key;
+        fbDb.ref('tasks/'+key).set({
+          ts: Date.now(),
+          user: USER_NAME + ' (uploaded)',
+          date: date,
+          srno: String(get('SrNo','Sr','SrNo','SerialNo')||''),
+          tag:  String(get('Tag','TagID','TagId')||''),
+          line: String(get('Line','LineNo')||'Line-1'),
+          plant:String(get('Plant','Station','PlantStation')||''),
+          job:  String(job),
+          doneby: String(get('DoneBy','By','Done')||''),
+          remarks: String(get('Remarks','Notes','Comments')||''),
+          uploadedFrom: f.name
+        });
+        added++;
+      });
+      // Save upload history
+      var hkey = fbDb.ref('uploads').push().key;
+      fbDb.ref('uploads/'+hkey).set({ filename:f.name, count:added, ts:Date.now(), user:USER_NAME });
+      closeM('uploadModal');
+      toast('Uploaded '+added+' tasks!');
+    } catch(err) {
+      toast('Upload failed: '+err.message, true);
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+// ════════════════════════════════════════════════════
+//  TASK ASSIGNMENT
+// ════════════════════════════════════════════════════
+var allAssigns = {};
+var currentAssignTab = 'all';
+var editingAssignId = null;
+
+function listenForAssigns() {
+  if (!fbDb) return;
+  fbDb.ref('assignments').on('value', function(snap){
+    allAssigns = snap.val() || {};
+    renderAssigns();
+  });
+}
+
+function switchAssignTab(t) {
+  currentAssignTab = t;
+  ['all','pending','done'].forEach(function(x){
+    document.getElementById('atab-'+x).classList.toggle('active', t===x);
+  });
+  renderAssigns();
+}
+
+function renderAssigns() {
+  var el = document.getElementById('assignList');
+  if (!el) return;
+  var arr = Object.keys(allAssigns).map(function(k){var a=allAssigns[k];a._id=k;return a;});
+  // Count
+  var pendingCnt = arr.filter(function(a){return a.status!=='Completed';}).length;
+  var doneCnt = arr.filter(function(a){return a.status==='Completed';}).length;
+  var ac = document.getElementById('acnt-all'); if(ac) ac.textContent = arr.length;
+  var pc = document.getElementById('acnt-pending'); if(pc) pc.textContent = pendingCnt;
+  var dc = document.getElementById('acnt-done'); if(dc) dc.textContent = doneCnt;
+  // Filter
+  var show = arr;
+  if (currentAssignTab === 'pending') show = arr.filter(function(a){return a.status!=='Completed';});
+  if (currentAssignTab === 'done') show = arr.filter(function(a){return a.status==='Completed';});
+  if (!show.length) { el.innerHTML = '<p class="nodata">No tasks in this view</p>'; return; }
+  show.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  var admin = isAdmin();
+  el.innerHTML = show.map(function(a,i){
+    var statusColor = a.status==='Completed'?'#16a34a':a.status==='Under Process'?'#f59e0b':'#dc2626';
+    var compStr = a.completedAt ? new Date(a.completedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
+    var btns = admin ? ('<button class="editbtn" onclick="editAssign(\''+a._id+'\')" title="Edit">&#9998;</button><button class="rdel" onclick="delAssign(\''+a._id+'\')">&#x2715;</button>') : '';
+    return '<div class="ri" style="display:block;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+        '<div style="flex:1;">' +
+          '<div class="ri-t">'+(i+1)+'. '+esc(a.name||'-')+'</div>' +
+          '<div style="font-size:13px;color:#0f172a;margin:4px 0;font-weight:600;">'+esc(a.job||'')+'</div>' +
+          '<div class="ri-times"><b>Target:</b> '+esc(a.target||'-')+' &middot; <b>Status:</b> <span style="color:'+statusColor+';font-weight:700;">'+esc(a.status||'Pending')+'</span></div>' +
+          '<div class="ri-times"><b>Completed:</b> '+compStr+(a.remarks?' &middot; <b>Note:</b> '+esc(a.remarks):'')+'</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:4px;">'+btns+'</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openAssign() {
+  editingAssignId = null;
+  document.getElementById('assignModalTitle').innerHTML = '&#43; Assign Task <button class="sheet-close" onclick="closeM(\'assignModal\')">&#215;</button>';
+  document.getElementById('asName').value = '';
+  document.getElementById('asJob').value = '';
+  document.getElementById('asTarget').value = new Date().toISOString().split('T')[0];
+  document.getElementById('asStatus').value = 'Pending';
+  document.getElementById('asRemarks').value = '';
+  showM('assignModal');
+}
+
+function editAssign(id) {
+  if (!isAdmin()) { toast('Admin only',true); return; }
+  var a = allAssigns[id]; if (!a) return;
+  editingAssignId = id;
+  document.getElementById('assignModalTitle').innerHTML = '&#9998; Edit Task <button class="sheet-close" onclick="closeM(\'assignModal\')">&#215;</button>';
+  document.getElementById('asName').value = a.name || '';
+  document.getElementById('asJob').value = a.job || '';
+  document.getElementById('asTarget').value = a.target || '';
+  document.getElementById('asStatus').value = a.status || 'Pending';
+  document.getElementById('asRemarks').value = a.remarks || '';
+  showM('assignModal');
+}
+
+function saveAssign() {
+  var name = document.getElementById('asName').value.trim();
+  var job = document.getElementById('asJob').value.trim();
+  var target = document.getElementById('asTarget').value;
+  var status = document.getElementById('asStatus').value;
+  var remarks = document.getElementById('asRemarks').value.trim();
+  if (!name || !job) { toast('Name and Job required',true); return; }
+  var data = { name:name, job:job, target:target, status:status, remarks:remarks, ts:Date.now(), user:USER_NAME };
+  if (status === 'Completed') data.completedAt = Date.now();
+  if (editingAssignId) {
+    fbDb.ref('assignments/'+editingAssignId).update(data).then(function(){ closeM('assignModal'); toast('Updated!'); editingAssignId=null; });
+  } else {
+    var key = fbDb.ref('assignments').push().key;
+    fbDb.ref('assignments/'+key).set(data).then(function(){ closeM('assignModal'); toast('Assigned!'); });
+  }
+}
+
+function delAssign(id) {
+  if (!isAdmin()) { toast('Admin only',true); return; }
+  askPassword('Delete Assignment','Enter admin password.',function(){
+    fbDb.ref('assignments/'+id).remove();
+  });
+}
+
+function openAssignReport() {
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('arrStart').value = today.substring(0,7)+'-01';
+  document.getElementById('arrEnd').value = today;
+  showM('assignRptModal');
+}
+
+function doAssignRpt(fmt) {
+  var s = document.getElementById('arrStart').value;
+  var e = document.getElementById('arrEnd').value;
+  if (!s||!e) { toast('Pick both dates',true); return; }
+  var arr = Object.keys(allAssigns).map(function(k){var a=allAssigns[k];a._id=k;return a;});
+  var rows = arr.filter(function(a){
+    var d = a.target || (a.ts? new Date(a.ts).toISOString().split('T')[0] : '');
+    return d >= s && d <= e;
+  });
+  if (!rows.length) { toast('No data',true); return; }
+  closeM('assignRptModal');
+  var fn = 'Assignment_'+s+'_to_'+e;
+  var data = rows.map(function(a,i){
+    var comp = a.completedAt ? new Date(a.completedAt).toLocaleString('en-GB') : '-';
+    return [i+1, a.name||'-', a.job||'-', a.status||'-', a.target||'-', comp, a.remarks||'-'];
+  });
+  var headers = ['Sr No','Name','Assigned Job','Status','Target Date','Completed','Remarks'];
+  if (fmt==='excel') {
+    var d = [headers].concat(data);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d), 'Assignments');
+    XLSX.writeFile(wb, fn+'.xlsx');
+  } else if (fmt==='pdf') {
+    var { jsPDF } = window.jspdf;
+    var doc = new jsPDF('l','mm','a4');
+    doc.setFontSize(14); doc.text('Task Assignment Report', 14, 14);
+    doc.autoTable({startY:20, head:[headers], body:data, theme:'striped', headStyles:{fillColor:[15,23,42]}, styles:{fontSize:8}});
+    doc.save(fn+'.pdf');
+  } else if (fmt==='word') {
+    remRptWordGeneric(rows.map(function(a,i){return {sr:i+1,name:a.name,job:a.job,status:a.status,target:a.target,completed:a.completedAt?new Date(a.completedAt).toLocaleString('en-GB'):'-',remarks:a.remarks||'-'};}), fn, headers, ['sr','name','job','status','target','completed','remarks']);
+  }
+  toast('Report downloaded!');
+}
+
+async function remRptWordGeneric(rows, fn, headers, keys) {
+  try {
+    var d = docx;
+    var Document=d.Document, Packer=d.Packer, Paragraph=d.Paragraph, Table=d.Table, TableRow=d.TableRow, TableCell=d.TableCell, TextRun=d.TextRun, WidthType=d.WidthType, AlignmentType=d.AlignmentType, HeadingLevel=d.HeadingLevel;
+    function cell(v,b){return new TableCell({children:[new Paragraph({children:[new TextRun({text:String(v||''),bold:!!b,size:b?20:18})]})],margins:{top:60,bottom:60,left:80,right:80}});}
+    var hRow = new TableRow({children:headers.map(function(c){return cell(c,true);})});
+    var dRows = rows.map(function(r){return new TableRow({children:keys.map(function(k){return cell(r[k]);})});});
+    var doc = new Document({sections:[{children:[
+      new Paragraph({text:fn.replace(/_/g,' '), heading:HeadingLevel.HEADING_1}),
+      new Paragraph({text:'Generated: '+new Date().toLocaleString(), spacing:{after:260}}),
+      new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[hRow].concat(dRows)})
+    ]}]});
+    var blob = await Packer.toBlob(doc);
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = fn+'.docx'; a.click();
+  } catch(e) { toast('Word error: '+e.message,true); }
+}
+
+// ════════════════════════════════════════════════════
+//  OVERDUE REMINDER POPUP + TICKER
+// ════════════════════════════════════════════════════
+var overdueShown = {};
+var currentOverdueId = null;
+
+function checkOverdueReminders() {
+  var arr = Object.keys(allRems).map(function(k){var r=allRems[k];r._id=k;return r;});
+  var now = new Date();
+  var hasUnaddressed2Days = false;
+  var unaddressedMsgs = [];
+  arr.forEach(function(r){
+    if (r.completedAt) return; // skip completed
+    if (r.overdueRemark) return; // skip already responded
+    var due = new Date(r.date+'T'+r.time);
+    if (due >= now) return; // not yet due
+    var hoursOverdue = (now - due) / 3600000;
+    // Show blue popup once if overdue and no remark yet
+    if (hoursOverdue > 0 && !overdueShown[r._id]) {
+      overdueShown[r._id] = true;
+      // Show popup for first overdue without remark
+      if (!currentOverdueId) {
+        currentOverdueId = r._id;
+        document.getElementById('overdueTxt').innerHTML = '<b>'+esc(r.text)+'</b><br>Due: '+r.date+' '+r.time+' (Overdue by '+Math.floor(hoursOverdue)+' hrs)';
+        document.getElementById('overdueRemark').value = '';
+        showM('overdueModal');
+      }
+    }
+    if (hoursOverdue > 48) {
+      hasUnaddressed2Days = true;
+      unaddressedMsgs.push(r.text);
+    }
+  });
+  // Ticker
+  var ticker = document.getElementById('overdueTicker');
+  var tt = document.getElementById('tickerText');
+  if (hasUnaddressed2Days) {
+    ticker.style.display = 'block';
+    tt.innerHTML = 'We are not focused towards our Job &middot;&middot;&middot; ' + unaddressedMsgs.map(esc).join(' &middot;&middot;&middot; ') + ' &middot;&middot;&middot; ';
+  } else {
+    ticker.style.display = 'none';
+  }
+}
+setInterval(checkOverdueReminders, 30000);
+
+function submitOverdueRemark() {
+  var txt = document.getElementById('overdueRemark').value.trim();
+  if (!txt) { toast('Remark required',true); return; }
+  if (!currentOverdueId) return;
+  fbDb.ref('reminders/'+currentOverdueId).update({
+    overdueRemark: txt, overdueRemarkBy: USER_NAME, overdueRemarkAt: Date.now()
+  }).then(function(){
+    closeM('overdueModal');
+    toast('Remark submitted');
+    currentOverdueId = null;
+  });
+}
+
+function renderChat() {
+  var el = document.getElementById('chatMsgs');
+  if (!el) return;
+  var arr = Object.keys(allChat).map(function(k){return allChat[k];});
+  arr.sort(function(a,b){ return (a.ts||0) - (b.ts||0); });
+  if (!arr.length) { el.innerHTML = '<div class="nodata">No messages yet. Start the conversation!</div>'; return; }
+  el.innerHTML = arr.map(function(m){
+    var mine = m.user === USER_NAME;
+    var time = new Date(m.ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+    return '<div class="chat-msg ' + (mine?'chat-mine':'chat-other') + '">' +
+      '<div class="chat-name">'+esc(m.user||'?')+'</div>' +
+      esc(m.text) +
+      '<div class="chat-time">'+time+'</div>' +
+    '</div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ════════════════════════════════════════════════════
+//  REMINDER REPORTS
+// ════════════════════════════════════════════════════
+function openRemReport() {
+  var today = new Date().toISOString().split('T')[0];
+  var monthStart = today.substring(0,7) + '-01';
+  document.getElementById('rrStart').value = monthStart;
+  document.getElementById('rrEnd').value = today;
+  showM('remRptModal');
+}
+
+function doRemRpt(fmt) {
+  var s = document.getElementById('rrStart').value;
+  var e = document.getElementById('rrEnd').value;
+  if (!s||!e) { toast('Pick both dates',true); return; }
+  var arr = Object.keys(allRems).map(function(k){var r=allRems[k];r._id=k;return r;});
+  var rows = arr.filter(function(r){ return r.date >= s && r.date <= e; });
+  if (!rows.length) { toast('No reminders in this range',true); return; }
+  rows.sort(function(a,b){ return (a.date+a.time).localeCompare(b.date+b.time); });
+  closeM('remRptModal');
+  var fn = 'Reminder_Report_'+s+'_to_'+e;
+  if (fmt==='excel') remRptExcel(rows, fn);
+  if (fmt==='word')  remRptWord(rows, fn);
+  if (fmt==='pdf')   remRptPDF(rows, fn);
+}
+
+function remRptExcel(rows, fn) {
+  var d = [['Sr No','Reminder','Added On','Due Date/Time','Completed','Priority','Remarks']];
+  rows.forEach(function(r,i){
+    var added = r.addedAt ? new Date(r.addedAt).toLocaleString() : '-';
+    var due = r.date + ' ' + r.time;
+    var comp = r.completedAt ? new Date(r.completedAt).toLocaleString() : (new Date(due) < new Date() ? 'Yes (auto)' : 'Pending');
+    d.push([i+1, r.text, added, due, comp, (r.priority||'med').toUpperCase(), r.remarks||'-']);
+  });
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d), 'Reminders');
+  XLSX.writeFile(wb, fn+'.xlsx');
+  toast('Excel downloaded!');
+}
+
+function remRptPDF(rows, fn) {
+  var { jsPDF } = window.jspdf;
+  var doc = new jsPDF('l','mm','a4');
+  doc.setFont('Helvetica','bold');
+  doc.setFontSize(14);
+  doc.setTextColor(15,23,42);
+  doc.text('Reminder Report', 14, 14);
+  doc.autoTable({
+    startY: 20,
+    head: [['Sr','Reminder','Added','Due','Completed','Priority','Remarks']],
+    body: rows.map(function(r,i){
+      var added = r.addedAt ? new Date(r.addedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}) : '-';
+      var due = r.date + ' ' + r.time;
+      var comp = r.completedAt ? new Date(r.completedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}) : (new Date(due) < new Date() ? 'Auto' : 'Pending');
+      return [i+1, r.text, added, due, comp, (r.priority||'med').toUpperCase(), r.remarks||'-'];
+    }),
+    theme:'striped', headStyles:{fillColor:[15,23,42]}, styles:{fontSize:8}
+  });
+  doc.save(fn+'.pdf');
+  toast('PDF downloaded!');
+}
+
+async function remRptWord(rows, fn) {
+  try {
+    var d = docx;
+    var Document=d.Document, Packer=d.Packer, Paragraph=d.Paragraph, Table=d.Table, TableRow=d.TableRow, TableCell=d.TableCell, TextRun=d.TextRun, WidthType=d.WidthType, AlignmentType=d.AlignmentType, HeadingLevel=d.HeadingLevel;
+    var cols = ['Sr','Reminder','Added','Due','Completed','Priority','Remarks'];
+    function cell(v,b){return new TableCell({children:[new Paragraph({children:[new TextRun({text:String(v||''),bold:!!b,size:b?20:18})],alignment:AlignmentType.LEFT})],margins:{top:60,bottom:60,left:80,right:80}});}
+    var hRow = new TableRow({children:cols.map(function(c){return cell(c,true);})});
+    var dRows = rows.map(function(r,i){
+      var added = r.addedAt ? new Date(r.addedAt).toLocaleString('en-GB') : '-';
+      var due = r.date + ' ' + r.time;
+      var comp = r.completedAt ? new Date(r.completedAt).toLocaleString('en-GB') : 'Pending';
+      return new TableRow({children:[i+1, r.text, added, due, comp, (r.priority||'med').toUpperCase(), r.remarks||'-'].map(function(v){return cell(v);})});
+    });
+    var doc = new Document({sections:[{children:[
+      new Paragraph({text:'Reminder Report', heading:HeadingLevel.HEADING_1}),
+      new Paragraph({text:'Generated: '+new Date().toLocaleString(), spacing:{after:260}}),
+      new Table({width:{size:100,type:WidthType.PERCENTAGE}, rows:[hRow].concat(dRows)})
+    ]}]});
+    var blob = await Packer.toBlob(doc);
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fn+'.docx';
+    a.click();
+    toast('Word downloaded!');
+  } catch(e) { toast('Word error: '+e.message,true); }
+}
+
+// Request notification permission on login
+if ('Notification' in window && Notification.permission === 'default') {
+  setTimeout(function(){ Notification.requestPermission(); }, 3000);
+}
+setInterval(renderRems, 60000);
+
+// AUTO REPORT (local config)
+function arInit(){
+  var c=JSON.parse(localStorage.getItem('pp_ar')||'{}');
+  if(c.from) document.getElementById('arFrom').value=c.from;
+  if(c.subject) document.getElementById('arSubj').value=c.subject;
+  if(c.time) document.getElementById('arTime').value=c.time;
+  if(c.freq) document.getElementById('arFreq').value=c.freq;
+  if(c.cc) document.getElementById('arCc').value=c.cc;
+  // Default report date = today
+  var d = document.getElementById('arRptDate');
+  if (d) d.value = new Date().toISOString().split('T')[0];
+  arRecs=c.recipients||[''];arOn=c.enabled||false;
+  document.getElementById('arEn').checked=arOn;
+  var ad=document.getElementById('ardot'); if(ad) ad.className='ar-dot'+(arOn?' on':'');
+  arRend();arPrev();if(arOn)arSched();
+}
+function arRend(){
+  var el=document.getElementById('arRecs');if(!el)return;el.innerHTML='';
+  arRecs.forEach(function(v,i){
+    var d=document.createElement('div');d.className='rec-row';
+    d.innerHTML='<span class="rec-num">'+(i+1)+'</span>'+
+      '<input type="email" class="ic" value="'+(v||'')+'" placeholder="email@example.com" style="flex:1;" oninput="arRecs['+i+']=this.value;arPrev()">'+
+      '<button class="rib rib-a" onclick="arAdd('+i+')">+</button>'+
+      (arRecs.length>1?'<button class="rib rib-r" onclick="arRm('+i+')">&#8722;</button>':'');
+    el.appendChild(d);
+  });
+}
+function arAdd(i){arRecs.splice(i+1,0,'');arRend();arPrev();}
+function arRm(i){arRecs.splice(i,1);arRend();arPrev();}
+function arPrev(){
+  var fe=document.getElementById('arFreq');
+  var pf=document.getElementById('pvFrom'),pt=document.getElementById('pvTo'),ps=document.getElementById('pvSubj'),psc=document.getElementById('pvSched');
+  if(pf) pf.textContent=document.getElementById('arFrom').value||'-';
+  if(pt) pt.textContent=arRecs.filter(function(r){return r.trim();}).join(', ')||'-';
+  if(ps) ps.textContent=document.getElementById('arSubj').value||'-';
+  if(psc&&fe) psc.textContent=(fe.options[fe.selectedIndex]||{}).text+' at '+(document.getElementById('arTime').value||'-');
+  // Add CC line
+  var ccEl=document.getElementById('pvCc');
+  if(ccEl) ccEl.textContent = document.getElementById('arCc').value || '-';
+}
+function arToggle(el){arOn=el.checked;var ad=document.getElementById('ardot');if(ad)ad.className='ar-dot'+(arOn?' on':'');if(arOn)arSched();else clearTimeout(arTmr);}
+function arSave(){
+  var f=document.getElementById('arFrom').value.trim(),s=document.getElementById('arSubj').value.trim();
+  var to=arRecs.filter(function(r){return r.trim();});
+  var cc=document.getElementById('arCc').value.trim();
+  if(!f||!s||!to.length){toast('Fill all fields',true);return;}
+  var c={from:f,subject:s,time:document.getElementById('arTime').value,freq:document.getElementById('arFreq').value,recipients:to,cc:cc,enabled:arOn};
+  localStorage.setItem('pp_ar',JSON.stringify(c));toast('Auto Report saved!');
+  if(arOn){ if(arTmr) clearTimeout(arTmr); arSched(); }
+}
+function arSched(){
+  clearTimeout(arTmr);
+  var c=JSON.parse(localStorage.getItem('pp_ar')||'{}');
+  if(!c.enabled||!c.time){
+    // Even if disabled, keep checking in case enabled later
+    arTmr=setTimeout(arSched,15000);
+    return;
+  }
+  var now=new Date(),p=c.time.split(':'),hh=+p[0],mm=+p[1],day=now.getDay();
+  var freqOk=(c.freq==='daily')||(c.freq==='weekdays'&&day>=1&&day<=5)||(c.freq==='weekly'&&day===1)||(c.freq==='monthly'&&now.getDate()===1);
+  var todayKey=now.toISOString().substring(0,10)+'_'+c.time;
+  var lastFired=localStorage.getItem('pp_ar_last')||'';
+  // Fire within first 15 sec of scheduled minute (broader window for reliability)
+  if (freqOk && now.getHours()===hh && now.getMinutes()===mm && lastFired!==todayKey) {
+    localStorage.setItem('pp_ar_last',todayKey);
+    arSendNow(c);
+  }
+  arTmr=setTimeout(arSched,15000);
+}
+
+// Restart scheduler on focus (in case browser was sleeping)
+window.addEventListener('focus', function(){
+  if (sessionStorage.getItem('pp_logged_in') === 'yes') {
+    if (typeof arSched === 'function') { clearTimeout(arTmr); arSched(); }
+  }
+});
+
+function arSendNow(c){
+  // Use the new send-for-date logic with today's date
+  var today = new Date().toISOString().split('T')[0];
+  arSendForDate(c, today);
+  toast('Auto Report fired!');
+}
+
+// Send Mail for selected date — generates PDF + opens mail with body
+function arSendMail(){
+  var c=JSON.parse(localStorage.getItem('pp_ar')||'{}');
+  if(!c.recipients||!c.recipients.length){toast('Save schedule first!',true);return;}
+  var date = document.getElementById('arRptDate').value || new Date().toISOString().split('T')[0];
+  arSendForDate(c, date);
+}
+
+function arSendForDate(c, date) {
+  var arr = Object.keys(allTasks).map(function(k){return allTasks[k];});
+  var rows = arr.filter(function(t){return t.date===date;});
+  rows.sort(function(a,b){
+    if (a.line !== b.line) return a.line.localeCompare(b.line);
+    return (parseInt(a.srno)||0) - (parseInt(b.srno)||0);
+  });
+
+  // Build body
+  var body = 'Dear Sir,\n        Please find the attachment.\n\n\n\nRegards,\n' + (USER_NAME || '');
+  if (rows.length) {
+    body += '\n\n--- Report Summary (Date: ' + date + ') ---\nTotal entries: ' + rows.length + '\n';
+    rows.forEach(function(t,i){
+      body += '\n' + (i+1) + '. [' + t.line + '] Sr#' + t.srno + ' - ' + t.job + ' (by ' + (t.doneby||'-') + ')';
+    });
+  } else {
+    body += '\n\n(No task entries for ' + date + ')';
+  }
+
+  // Step 1: Download PDF first (so user has it ready)
+  if (rows.length) {
+    try {
+      xPDF(rows, 'PackingPlant_Report_' + date);
+      toast('PDF downloaded! Attach it to the email.');
+    } catch(e) {
+      toast('PDF gen error: '+e.message, true);
+      console.error(e);
+    }
+  } else {
+    toast('No tasks for ' + date + ' — sending mail without attachment');
+  }
+
+  // Step 2: Open mail client AFTER PDF download (give browser 1.5 sec)
+  var to = c.recipients.join(',');
+  var cc = (c.cc || '').trim();
+  var mailto = 'mailto:' + to + '?subject=' + encodeURIComponent((c.subject||'Packing Plant Report') + ' - ' + date);
+  if (cc) mailto += '&cc=' + encodeURIComponent(cc);
+  mailto += '&body=' + encodeURIComponent(body);
+  setTimeout(function(){
+    // Use a temp link instead of window.open for better mobile support
+    var a = document.createElement('a');
+    a.href = mailto;
+    a.target = '_self';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, 1500);
+}
+
+// NAV
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active'); });
+  var p = document.getElementById('page-'+name), n = document.getElementById('nav-'+name);
+  if(p) p.classList.add('active'); if(n) n.classList.add('active');
+  if(name === 'dash') setTimeout(function(){ if(cal) cal.updateSize(); reHL(); refreshDots(); }, 100);
+}
+
+// MODALS
+function showM(id){ document.getElementById(id).style.display='flex'; }
+function closeM(id){ document.getElementById(id).style.display='none'; }
+document.querySelectorAll('.overlay').forEach(function(el){
+  el.addEventListener('click', function(e){ if(e.target===el) el.style.display='none'; });
+});
+
+// TOAST
+var toastTmr;
+function toast(msg, err) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = err ? 'show err' : 'show';
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(function(){ t.className=''; }, 3000);
+}
+</script>
+</body>
+</html>
